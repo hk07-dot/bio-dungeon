@@ -245,6 +245,13 @@ const T = {
  hostNote:['Your classes are linked to this browser. Use the same device and browser to manage them.','Kelas anda dipautkan kepada pelayar ini. Gunakan peranti dan pelayar yang sama untuk mengurusnya.'],
  joinAt:['Join at','Sertai di'], gamePin:['Game PIN','PIN Permainan'],
  isOpen:['Open for joining','Dibuka untuk penyertaan'], isClosed:['Locked','Dikunci'],
+ delClass:['🗑 Delete class','🗑 Padam kelas'], delSure:['Tap again to delete this class and all its progress','Ketik sekali lagi untuk memadam kelas ini dan semua kemajuannya'],
+ deleted:['Class deleted','Kelas dipadam'],
+ tGateTitle:['Teacher passcode','Kod laluan guru'],
+ tGateSub:['Enter the teacher passcode once on this device to create classes.','Masukkan kod laluan guru sekali pada peranti ini untuk mencipta kelas.'],
+ tGateBtn:['Unlock teacher tools','Buka alatan guru'], tChecking:['Checking…','Menyemak…'],
+ tWrong:['That passcode isn\'t right.','Kod laluan itu tidak betul.'],
+ tStale:['The teacher passcode was changed. Enter the new one.','Kod laluan guru telah ditukar. Masukkan kod baharu.'],
  lock:['🔒 Lock class','🔒 Kunci kelas'], unlock:['🔓 Unlock class','🔓 Buka kelas'],
  leader:['🏆 Leaderboard','🏆 Papan Pendahulu'], ptsLbl:['pts','mata'], sPts:['Points','Mata'],
  ptsRule:['Points: 100 per correct answer + 500 per zone cleared.','Mata: 100 bagi setiap jawapan betul + 500 bagi setiap zon selesai.'],
@@ -841,7 +848,7 @@ function titleScreen(){
         ${S ? `<button class="btn ghost block" onclick="show(mapScreen)">${t('cont')}${esc(S.name)}</button>` : ''}
         <button class="btn ghost block" onclick="pendingJoin=null;show(classScreen)">${t('newAdv')}</button>
       </div>
-      <button class="btn ghost block" style="margin-top:10px" onclick="dashCtx=null;show(hostScreen)">${t('hostBtn')}</button>
+
     </div>
     <p class="muted center" style="font-size:13px">${t('savedNote')}</p>`;
 }
@@ -1206,27 +1213,65 @@ const ROOMS_KEY = 'bioDungeonRooms';
 function loadRooms(){ try{ return JSON.parse(localStorage.getItem(ROOMS_KEY)) || []; }catch(e){ return []; } }
 function saveRooms(r){ try{ localStorage.setItem(ROOMS_KEY, JSON.stringify(r)); }catch(e){} }
 let dashCtx = null; // {pin, host}
+let teacherOK = null, confirmDel = null;
+async function checkTeacher(){
+  if(!(await fbInit())) return false;
+  try{ const s = await FDB.ref('teacherClaims/'+UID).get(); teacherOK = s.exists(); }catch(e){ teacherOK = false; }
+  return teacherOK;
+}
+async function verifyTeacher(){
+  const code = document.getElementById('tcode').value.trim();
+  const msg = m => { document.getElementById('tmsg').innerHTML = m; };
+  if(!code) return;
+  msg(t('tChecking'));
+  if(!(await fbInit())) return msg(`<span class="badc">${t('netErr')}</span>`);
+  try{ await FDB.ref('teacherClaims/'+UID).set(code); teacherOK = true; hostScreen(); }
+  catch(e){ msg(`<span class="badc">${t('tWrong')}</span>`); }
+}
+function leaveTeacher(){ try{ history.replaceState(null,'',location.pathname); }catch(e){} show(titleScreen); }
 function hostScreen(){
+  const head = `<div class="row" style="justify-content:space-between;margin-bottom:6px"><h2>${t('hostTitle')}</h2>
+      <button class="btn ghost small" onclick="leaveTeacher()">${t('back')}</button></div>`;
+  if(!FB_READY){ app.innerHTML = head + `<div class="note">${t('notSetup')}</div>`; return; }
+  if(teacherOK === null){ app.innerHTML = head + `<div class="note">${t('tChecking')}</div>`; checkTeacher().then(()=>{ if(SCREEN===hostScreen) hostScreen(); }); return; }
+  if(!teacherOK){
+    app.innerHTML = head + `<div class="panel">
+      <h3>🔑 ${t('tGateTitle')}</h3><p class="muted" style="font-size:14px">${t('tGateSub')}</p>
+      <input type="password" id="tcode" maxlength="64" autocomplete="off" style="margin:6px 0 12px" onkeydown="if(event.key==='Enter')verifyTeacher()">
+      <button class="btn block" onclick="verifyTeacher()">${t('tGateBtn')}</button>
+      <div id="tmsg" class="muted center" style="margin-top:8px;font-size:14px"></div></div>`;
+    return;
+  }
   const rooms = loadRooms();
-  app.innerHTML = `
-    <div class="row" style="justify-content:space-between;margin-bottom:6px"><h2>${t('hostTitle')}</h2>
-      <button class="btn ghost small" onclick="show(titleScreen)">${t('back')}</button></div>
+  app.innerHTML = head + `
     <p class="muted">${t('hostSub')}</p>
-    ${FB_READY ? '' : `<div class="note">${t('notSetup')}</div>`}
     <div class="panel">
       <label class="muted" style="font-size:14px">${t('roomName')}</label>
       <input type="text" id="rname" maxlength="40" placeholder="${esc(t('roomPh'))}" style="margin:6px 0 12px">
-      <button class="btn block" id="mk" onclick="createRoom()" ${FB_READY?'':'disabled'}>${t('createRoom')}</button>
+      <button class="btn block" id="mk" onclick="createRoom()">${t('createRoom')}</button>
       <div id="hmsg" class="muted center" style="margin-top:8px;font-size:14px"></div>
     </div>
     <div class="panel">
       <h3>${t('myRooms')}</h3>
       ${rooms.length ? rooms.map(r=>`<div class="scard row" style="justify-content:space-between">
           <div><b>${esc(r.title)}</b><div class="muted" style="font-size:13px">PIN ${fmtPin(r.pin)}</div></div>
-          <button class="btn small" onclick="openRoom('${r.pin}')">${t('openDash')}</button></div>`).join('')
+          <div class="row" style="gap:6px"><button class="btn small" onclick="openRoom('${r.pin}')">${t('openDash')}</button>
+          <button class="btn ghost small" style="${confirmDel===r.pin?'border-color:var(--bad);color:var(--bad)':''}" onclick="deleteRoom('${r.pin}')">${confirmDel===r.pin?t('delSure'):t('delClass')}</button></div></div>`).join('')
         : `<p class="muted">${t('noRooms')}</p>`}
       <p class="muted" style="font-size:12.5px;margin-bottom:0">${t('hostNote')}</p>
     </div>`;
+}
+async function deleteRoom(pin){
+  pin = String(pin).replace(/\D/g,'');
+  if(confirmDel !== pin){ confirmDel = pin; SCREEN(); return; }
+  confirmDel = null;
+  if(dash.pin === pin) stopDash();
+  try{
+    await FDB.ref(`games/${pin}/players`).remove();
+    await FDB.ref(`games/${pin}/meta`).remove();
+  }catch(e){ /* already gone or not ours: still drop it from this list */ }
+  saveRooms(loadRooms().filter(r=>r.pin!==pin));
+  dashCtx = null; toast(t('deleted')); show(hostScreen);
 }
 const fmtPin = p => String(p).replace(/(\d{3})(\d{3})/, '$1 $2');
 async function createRoom(){
@@ -1242,7 +1287,8 @@ async function createRoom(){
       return openRoom(pin);
     }catch(e){ /* PIN taken by another teacher: try another */ }
   }
-  document.getElementById('mk').disabled=false; msg(`<span class="badc">${t('netErr')}</span>`);
+  // every attempt refused: most likely the teacher passcode was changed
+  teacherOK = false; hostScreen(); const m = document.getElementById('tmsg'); if(m) m.innerHTML = `<span class="badc">${t('tStale')}</span>`;
 }
 function openRoom(pin){ dashCtx = {pin, host:true}; show(dashScreen); }
 async function setOpen(v){ try{ await FDB.ref(`games/${dashCtx.pin}/meta/open`).set(v); }catch(e){ toast(t('netErr')); } }
@@ -1320,6 +1366,7 @@ function renderDash(){
   const hostCtl = host && meta ? `<div class="row" style="margin-bottom:14px">
       ${meta.open ? `<span class="chip good">● ${t('isOpen')}</span><button class="btn ghost small" onclick="setOpen(false)">${t('lock')}</button>`
                   : `<span class="chip badc">● ${t('isClosed')}</span><button class="btn ghost small" onclick="setOpen(true)">${t('unlock')}</button>`}
+      <button class="btn ghost small" style="${confirmDel===dash.pin?'border-color:var(--bad);color:var(--bad)':''}" onclick="deleteRoom('${dash.pin}')">${confirmDel===dash.pin?t('delSure'):t('delClass')}</button>
     </div>` : '';
   // leaderboard
   const lead = rows.slice().sort((a,b)=>b.points-a.points).slice(0,10);
@@ -1414,7 +1461,10 @@ function renderDash(){
 }
 
 renderLangBar();
-show(titleScreen);
+// Teacher tools are not linked from the main page: open the game link with #teacher at the end
+const route = () => { if(location.hash === '#teacher') show(hostScreen); };
+window.addEventListener('hashchange', route);
+show(location.hash === '#teacher' ? hostScreen : titleScreen);
 if(S && S.pin) queueSync();
 
 </script>
