@@ -1,0 +1,1422 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Biology Dungeon: The Living Realm</title>
+<!-- Firebase (free tier) powers the live class PIN, leaderboard and dashboard. See SETUP.md -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;800&family=Nunito:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#14111c; --panel:#211b2e; --panel2:#2b2340; --line:#3d3358;
+  --gold:#e8b84a; --gold2:#f6d98a; --text:#ece6f5; --muted:#a79bbf;
+  --good:#4fc98a; --bad:#e45b5b; --blue:#5aa8e8; --xp:#a77bf0;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--text);font-family:Nunito,system-ui,sans-serif;}
+body{background:radial-gradient(ellipse at top,#2a1f3d 0%,var(--bg) 60%) fixed;min-height:100vh}
+#app{max-width:720px;margin:0 auto;padding:56px 14px 40px}
+h1,h2,h3{font-family:Cinzel,serif;margin:0}
+h1{font-size:30px;color:var(--gold);text-align:center;letter-spacing:1px;line-height:1.2}
+h2{font-size:21px;color:var(--gold2)}
+h3{font-size:16px}
+.sub{color:var(--muted);text-align:center;margin:8px 0 22px}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px;margin-bottom:14px}
+.btn{font:inherit;font-weight:800;border:0;border-radius:10px;padding:12px 16px;cursor:pointer;background:var(--gold);color:#2a1d05;transition:transform .08s,filter .15s}
+.btn:hover{filter:brightness(1.08)} .btn:active{transform:scale(.97)}
+.btn.ghost{background:transparent;color:var(--text);border:1px solid var(--line)}
+.btn.small{padding:8px 12px;font-size:14px}
+.btn.on{border-color:var(--gold);color:var(--gold)}
+.btn:disabled{opacity:.4;cursor:not-allowed;filter:none}
+.btn.block{display:block;width:100%}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+@media(max-width:480px){.grid2{grid-template-columns:1fr}}
+.hero{font-size:64px;text-align:center;margin:10px 0}
+input[type=text],textarea{font:inherit;width:100%;padding:12px;border-radius:10px;border:1px solid var(--line);background:var(--panel2);color:var(--text)}
+textarea{font-family:ui-monospace,monospace;font-size:12px;resize:vertical;min-height:64px;word-break:break-all}
+.langbar{position:fixed;top:10px;right:10px;z-index:8;display:flex;background:var(--panel);border:1px solid var(--line);border-radius:20px;overflow:hidden;box-shadow:0 4px 14px rgba(0,0,0,.35)}
+.langbar button{font:inherit;font-weight:800;font-size:13px;border:0;background:transparent;color:var(--muted);padding:7px 12px;cursor:pointer}
+.langbar button.on{background:var(--gold);color:#2a1d05}
+.cls{background:var(--panel2);border:2px solid var(--line);border-radius:12px;padding:12px;cursor:pointer;text-align:left;color:var(--text);font:inherit}
+.cls.sel{border-color:var(--gold);box-shadow:0 0 0 3px rgba(232,184,74,.2)}
+.cls .ic{font-size:30px}
+.cls b{display:block;font-family:Cinzel,serif;margin:4px 0}
+.cls small{color:var(--muted);display:block;line-height:1.4}
+.bar{height:10px;background:#0e0b14;border-radius:6px;overflow:hidden;border:1px solid var(--line)}
+.bar>i{display:block;height:100%;transition:width .4s}
+.hpbar>i{background:linear-gradient(90deg,#c43d3d,#ef6b6b)}
+.xpbar>i{background:linear-gradient(90deg,#7a52d1,var(--xp))}
+.ehp>i{background:linear-gradient(90deg,#9d3fd6,#d36cf0)}
+.zbar>i{background:linear-gradient(90deg,#b8862a,var(--gold))}
+.stat{font-size:13px;color:var(--muted);display:flex;justify-content:space-between;margin:6px 0 3px}
+.hud{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.chips{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
+.chip{background:var(--panel2);border:1px solid var(--line);border-radius:20px;padding:4px 10px;font-size:13px}
+.formhdr{display:flex;align-items:center;gap:10px;margin:20px 0 10px;color:var(--gold2);font-family:Cinzel,serif}
+.formhdr:after{content:"";flex:1;height:1px;background:var(--line)}
+.path{position:relative;padding-left:26px}
+.path:before{content:"";position:absolute;left:11px;top:10px;bottom:10px;width:2px;background:repeating-linear-gradient(var(--line) 0 6px,transparent 6px 12px)}
+.zone{position:relative;display:flex;gap:12px;align-items:center;width:100%;text-align:left;font:inherit;color:var(--text);background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px;margin-bottom:10px;cursor:pointer}
+.zone:before{content:"";position:absolute;left:-21px;top:50%;width:12px;height:12px;margin-top:-6px;border-radius:50%;background:var(--line);border:2px solid var(--bg)}
+.zone.open:before{background:var(--gold)} .zone.done:before{background:var(--good)}
+.zone.locked{opacity:.45;cursor:not-allowed}
+.zone .zi{font-size:30px;width:44px;text-align:center}
+.zone .zt{flex:1} .zone .zt small{color:var(--muted);display:block}
+.zone .tag{font-size:12px;padding:3px 8px;border-radius:8px;background:var(--panel2);white-space:nowrap}
+.zone.open .tag{color:var(--gold)} .zone.done .tag{color:var(--good)}
+.enemy{text-align:center}
+.enemy .face{line-height:0;margin:4px 0;display:inline-block;filter:drop-shadow(0 6px 10px rgba(0,0,0,.45))}
+.enemy .face svg{width:130px;height:130px}
+.ref{font-size:12.5px;color:var(--muted);margin:2px 0 8px}
+.toast svg{vertical-align:middle;margin-right:4px}
+.enemy .face.hit{animation:shake .4s}
+.enemy .face.dead{animation:die .6s forwards}
+@keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-10px) rotate(-6deg)}75%{transform:translateX(10px) rotate(6deg)}}
+@keyframes die{to{transform:scale(.2) rotate(90deg);opacity:0}}
+.boss-tag{display:inline-block;background:#5a1d2e;color:#ffb3c1;font-size:12px;padding:2px 8px;border-radius:8px;font-weight:800;letter-spacing:1px}
+.q{font-size:17px;font-weight:600;line-height:1.45;margin:4px 0 14px}
+.opts{display:grid;gap:8px}
+.opt{font:inherit;text-align:left;padding:12px 14px;border-radius:10px;border:1px solid var(--line);background:var(--panel2);color:var(--text);cursor:pointer;line-height:1.35}
+.opt:hover:not(:disabled){border-color:var(--gold)}
+.opt:disabled{cursor:default}
+.opt.right{background:#173a2a;border-color:var(--good);opacity:1}
+.opt.wrong{background:#3f1a1f;border-color:var(--bad)}
+.opt.gone{opacity:.25;text-decoration:line-through}
+.result{margin-top:14px;padding:14px;border-radius:12px;background:#17121f;border:1px solid var(--line)}
+.dice{display:flex;align-items:center;gap:14px}
+.d20{width:58px;height:58px;flex:none;display:flex;align-items:center;justify-content:center;font-family:Cinzel,serif;font-weight:800;font-size:22px;color:#2a1d05;background:var(--gold);clip-path:polygon(50% 0,100% 25%,100% 75%,50% 100%,0 75%,0 25%)}
+.d20.roll{animation:spin .6s linear}
+.d20.crit{background:#7dffb6} .d20.fail{background:var(--bad);color:#fff}
+@keyframes spin{to{transform:rotate(360deg)}}
+.good{color:var(--good)} .badc{color:var(--bad)} .goldc{color:var(--gold)}
+.expl{margin-top:10px;font-size:14.5px;line-height:1.5;color:#d8cfe8;border-left:3px solid var(--blue);padding-left:10px}
+.toast{position:fixed;left:50%;top:54px;transform:translateX(-50%);background:var(--gold);color:#2a1d05;font-weight:800;padding:10px 18px;border-radius:12px;box-shadow:0 6px 24px rgba(0,0,0,.4);z-index:9;animation:pop 2.4s forwards;max-width:90vw;text-align:center}
+@keyframes pop{0%{opacity:0;transform:translate(-50%,-10px)}10%,80%{opacity:1;transform:translate(-50%,0)}100%{opacity:0}}
+.jitem{border-bottom:1px solid var(--line);padding:12px 0}
+.jitem:last-child{border-bottom:0}
+.muted{color:var(--muted)}
+.center{text-align:center}
+.foes{display:flex;justify-content:center;gap:6px;margin-bottom:6px}
+.foes span{font-size:12px;width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:var(--panel2);border:1px solid var(--line)}
+.foes span.now{border-color:var(--gold)} .foes span.down{opacity:.3}
+.toggle{display:flex;align-items:center;gap:8px;font-size:14px;color:var(--muted);cursor:pointer}
+/* dashboard */
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+@media(max-width:560px){.kpis{grid-template-columns:1fr 1fr}}
+.kpi{background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:12px}
+.kpi small{color:var(--muted);display:block;font-size:12px}
+.kpi b{font-size:22px;font-family:Cinzel,serif;color:var(--gold2)}
+.trow{display:grid;grid-template-columns:150px 1fr 74px;gap:10px;align-items:center;font-size:14px;margin:8px 0}
+@media(max-width:480px){.trow{grid-template-columns:110px 1fr 64px;font-size:13px}}
+.trow .bar{height:12px}
+.trow .v{text-align:right;color:var(--muted);font-size:12.5px}
+.accg>i{background:var(--good)} .acca>i{background:var(--gold)} .accb>i{background:var(--bad)}
+.scard{background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:12px;margin-bottom:10px}
+.scard.me{border-color:var(--gold)}
+.scard .top{display:flex;justify-content:space-between;gap:8px;align-items:flex-start}
+.scard .nm{font-weight:800}
+.scard .real{color:var(--muted);font-size:13px}
+.minis{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:13px;color:var(--muted);margin-top:8px}
+.minis b{color:var(--text)}
+.dots{display:flex;gap:4px;margin-top:8px}
+.dots span{flex:1;height:8px;border-radius:4px;background:#0e0b14;border:1px solid var(--line)}
+.dots span.d{background:var(--good);border-color:var(--good)}
+.note{font-size:14px;line-height:1.5;padding:10px 12px;border-radius:10px;background:#17121f;border:1px solid var(--line);margin-bottom:12px}
+.pinbar{display:flex;justify-content:space-between;align-items:flex-end;gap:12px;background:linear-gradient(135deg,#3b2a6b,#5a2a5e);border:1px solid var(--line);border-radius:14px;padding:14px 16px;margin-bottom:12px}
+.pinbar small{color:var(--muted);font-size:12px}
+.pinbar .url{font-size:13px;word-break:break-all;color:var(--text)}
+.bigpin{font-family:Cinzel,serif;font-weight:800;font-size:36px;color:var(--gold);letter-spacing:3px;line-height:1.1;white-space:nowrap}
+.bigin{font-size:28px !important;text-align:center;letter-spacing:6px;font-weight:800}
+.lrow{display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:10px;background:var(--panel2);margin-bottom:6px}
+.lrow.me{outline:2px solid var(--gold)}
+.lrow .md{width:28px;text-align:center;font-size:20px}
+.lrow .rk{font-size:14px;color:var(--muted);font-weight:800}
+.lrow .ln{flex:1;font-weight:700}
+.lrow .lp{font-weight:800;color:var(--gold2)}
+.badge{font-size:11px;padding:2px 7px;border-radius:8px;background:#3a2f55;color:var(--gold2);font-weight:800;vertical-align:middle}
+</style>
+</head>
+<body>
+<div class="langbar" id="langbar"></div>
+<div id="app"></div>
+<script>
+// ======================= LANGUAGE =======================
+let LANG = 'en';
+try{ LANG = localStorage.getItem('bioLang') || 'en'; }catch(e){}
+const L = a => Array.isArray(a) ? (LANG==='bm' ? a[1] : a[0]) : a;
+const T = {
+ subtitle:['The Living Realm · KSSM Biology Form 4 & 5','Alam Hidupan · Biologi KSSM Tingkatan 4 & 5'],
+ intro:['Explore ten dungeon zones based on the syllabus. Answer biology questions to strike, then roll the <b class="goldc">d20</b> to see how hard you hit. Wrong answers let the monsters strike back.','Terokai sepuluh zon dungeon berdasarkan sukatan pelajaran. Jawab soalan Biologi untuk menyerang, kemudian baling dadu <b class="goldc">d20</b> untuk melihat kekuatan seranganmu. Jawapan salah membolehkan raksasa menyerang balas.'],
+ cont:['▶ Continue as ','▶ Teruskan sebagai '],
+ newAdv:['✦ New Adventure','✦ Pengembaraan Baharu'],
+ savedNote:['Progress is saved on this device. When you join a class, it also syncs to the class leaderboard.','Kemajuan disimpan pada peranti ini. Apabila anda menyertai kelas, ia turut diselaraskan ke papan pendahulu kelas.'],
+ dashBtn:['📊 Class Dashboard','📊 Papan Pemuka Kelas'],
+ create:['Create Your Hero','Cipta Wiramu'],
+ clsHint:['Your class gives a +3 bonus to dice rolls in its zones.','Kelasmu memberi bonus +3 kepada balingan dadu dalam zonnya.'],
+ heroName:['Hero name','Nama wira'],
+ namePh:['e.g. Aisyah the Wise','cth. Aisyah si Bijak'],
+ enter:['Enter the Dungeon','Mulakan Pengembaraan'],
+ back:['← Back','← Kembali'],
+ level:['Level','Tahap'], lv:['Lv','Thp'],
+ acc:['Accuracy','Ketepatan'],
+ potions:['Potions','Posyen'], notes:['Lab Notes','Nota Makmal'], zones:['Zones','Zon'],
+ f4:['Form 4 · The Inner Body Dungeons','Tingkatan 4 · Dungeon Dalam Tubuh'],
+ f5:['Form 5 · The Overworld Wilds','Tingkatan 5 · Alam Liar Luar'],
+ cleared:['✔ Cleared','✔ Selesai'], enterZ:['Enter','Masuk'],
+ journalBtn:n=>[`📖 Mistake Journal (${n} to review)`,`📖 Jurnal Kesilapan (${n} untuk diulang kaji)`],
+ teacherMode:['Teacher mode: unlock all zones','Mod guru: buka semua zon'],
+ reset:['Reset','Set Semula'], resetQ:['Delete this hero and all progress?','Padam wira ini dan semua kemajuan?'],
+ yesReset:['Yes, reset','Ya, set semula'], cancel:['Cancel','Batal'],
+ jTitle:['📖 Mistake Journal','📖 Jurnal Kesilapan'],
+ jDesc:['Questions you got wrong stay here until you answer them correctly in battle.','Soalan yang anda jawab salah kekal di sini sehingga anda menjawabnya dengan betul dalam pertempuran.'],
+ jEmpty:['Nothing to review. Well done, scholar! ✨','Tiada apa untuk diulang kaji. Syabas, cendekiawan! ✨'],
+ backMap:['← Back to Map','← Kembali ke Peta'],
+ flee:['🏃 Flee','🏃 Lari'], boss:['BOSS','BOS'],
+ potionBtn:['🧪 Potion +15','🧪 Posyen +15'],
+ crit:d=>[`<b class="good">NATURAL 20! Critical hit!</b> You deal <b>${d}</b> damage.`,`<b class="good">20 SEMPURNA! Serangan kritikal!</b> Anda memberi <b>${d}</b> kerosakan.`],
+ glance:d=>[`<b class="goldc">Correct, but you stumble (natural 1).</b> A glancing blow for <b>${d}</b> damage.`,`<b class="goldc">Betul, tetapi anda tersadung (dadu 1).</b> Serangan lemah, <b>${d}</b> kerosakan.`],
+ hit:d=>[`<b class="good">Correct!</b> You strike for <b>${d}</b> damage.`,`<b class="good">Betul!</b> Anda menyerang dengan <b>${d}</b> kerosakan.`],
+ dodge:(f,t)=>[`<b class="badc">Wrong.</b> The ${f} lunges, but you roll <b>${t}</b> and <b class="good">dodge!</b>`,`<b class="badc">Salah.</b> ${f} menerkam, tetapi anda mendapat <b>${t}</b> dan <b class="good">berjaya mengelak!</b>`],
+ hurt:(f,t,d)=>[`<b class="badc">Wrong!</b> You roll <b>${t}</b> and fail to dodge. The ${f} hits you for <b>${d}</b> damage.`,`<b class="badc">Salah!</b> Anda mendapat <b>${t}</b> dan gagal mengelak. ${f} menyerang anda, <b>${d}</b> kerosakan.`],
+ xp10:['(+10 XP)','(+10 XP)'],
+ atkRoll:['Attack roll','Balingan serangan'], bonusDmg:[' (+3 class bonus to damage)',' (+3 bonus kelas kepada kerosakan)'],
+ dodgeRoll:['Dodge roll','Balingan elakan'], bonus3:[' +3 class bonus',' +3 bonus kelas'], need14:[' · need 14',' · perlu 14'],
+ rolling:['Rolling…','Membaling…'], answer:['Answer:','Jawapan:'], next:['Continue →','Teruskan →'],
+ levelUp:n=>[`⬆ LEVEL UP! You are now level ${n}`,`⬆ NAIK TAHAP! Anda kini tahap ${n}`],
+ defeated:['Defeated! +20 XP','Tewas! +20 XP'], loot:['Loot','Ganjaran'],
+ potion:['🧪 Potion','🧪 Posyen'], note:['📜 Lab Note','📜 Nota Makmal'],
+ appears:f=>[`👑 The ${f} appears!`,`👑 ${f} muncul!`],
+ win:['The Living Realm is Saved!','Alam Hidupan Telah Diselamatkan!'], zoneCleared:['Zone Cleared!','Zon Selesai!'],
+ beat:(b,z)=>[`You defeated ${b} in ${z}.`,`Anda telah menewaskan ${b} di ${z}.`],
+ allDone:(a,n)=>[`You've conquered every zone of Form 4 & 5 Biology.<br>Final accuracy: <b class="goldc">${a}%</b> over ${n} questions.`,`Anda telah menakluki semua zon Biologi Tingkatan 4 & 5.<br>Ketepatan akhir: <b class="goldc">${a}%</b> daripada ${n} soalan.`],
+ grand:['Clear your Mistake Journal to become a true Grandmaster. Ready for SPM!','Kosongkan Jurnal Kesilapan untuk menjadi Mahaguru sejati. Bersedia untuk SPM!'],
+ xp60:['+60 XP · Loot:','+60 XP · Ganjaran:'],
+ retMap:['Return to Map','Kembali ke Peta'],
+ fainted:['You Fainted…','Anda Pengsan…'], tooStrong:f=>[`${f} was too strong this time.`,`${f} terlalu kuat kali ini.`],
+ keep:['You keep your XP and items. Check the Mistake Journal, then try again!','XP dan barangan anda kekal. Semak Jurnal Kesilapan, kemudian cuba lagi!'],
+ retry:['⚔ Retry Zone','⚔ Cuba Zon Semula'], review:['📖 Review Mistakes','📖 Ulang Kaji Kesilapan'],
+ nameless:['Nameless Hero','Wira Tanpa Nama'],
+ // dashboard
+ dTitle:['📊 Class Dashboard','📊 Papan Pemuka Kelas'],
+ dDesc:['Live progress of every student playing this game.','Kemajuan langsung setiap pelajar yang bermain permainan ini.'],
+ students:['Students','Pelajar'], avgAcc:['Avg accuracy','Purata ketepatan'], avgZones:['Avg zones cleared','Purata zon selesai'], answered:['Questions answered','Soalan dijawab'],
+ topicTitle:['Class accuracy by topic','Ketepatan kelas mengikut topik'],
+ topicHint:['Weakest topics first: focus revision here.','Topik paling lemah dahulu: fokuskan ulang kaji di sini.'],
+ noTry:['not tried','belum dicuba'],
+ sort:['Sort:','Susun:'], sZones:['Progress','Kemajuan'], sAcc:['Accuracy','Ketepatan'], sRecent:['Recent','Terkini'], sName:['Name','Nama'],
+ weak:['Weakest','Paling lemah'], toReview:['to review','untuk diulang kaji'], active:['Active','Aktif'], qs:['questions','soalan'],
+ empty:['No student progress yet. It appears here as soon as students start playing.','Belum ada kemajuan pelajar. Ia akan dipaparkan sebaik pelajar mula bermain.'],
+ connecting:['Connecting to class data…','Menyambung ke data kelas…'],
+ slow:['The class data can\'t be reached yet. What you see may be out of date.','Data kelas belum dapat dicapai. Paparan mungkin tidak terkini.'],
+ dbErr:['The class data stopped updating. Reopen the dashboard later.','Data kelas berhenti dikemas kini. Buka semula papan pemuka kemudian.'],
+ offline:['Live sync isn\'t available here: you need to be signed in to claude.ai with access to this game. You can still share progress with codes below.','Penyelarasan langsung tidak tersedia di sini: anda perlu log masuk ke claude.ai dengan akses kepada permainan ini. Anda masih boleh berkongsi kemajuan menggunakan kod di bawah.'],
+ noWrite:['You can view this dashboard, but your access level can\'t save your progress to it. Send your progress code to your teacher instead.','Anda boleh melihat papan pemuka ini, tetapi tahap akses anda tidak boleh menyimpan kemajuan anda. Hantar kod kemajuan anda kepada guru.'],
+ synced:['✔ Your progress syncs to this dashboard automatically.','✔ Kemajuan anda diselaraskan ke papan pemuka ini secara automatik.'],
+ codeTitle:['Progress codes','Kod kemajuan'],
+ myCode:['Your progress code: send it to your teacher if live sync isn\'t available.','Kod kemajuan anda: hantar kepada guru jika penyelarasan langsung tidak tersedia.'],
+ copy:['Copy code','Salin kod'], copied:['Copied!','Disalin!'], copyFail:['Select the code and copy it manually.','Pilih kod dan salin secara manual.'],
+ noHero:['Create a hero first to get your code.','Cipta wira dahulu untuk mendapatkan kod anda.'],
+ addCode:['Teacher: paste a student\'s code to add them (saved in this browser only).','Guru: tampal kod pelajar untuk menambah mereka (disimpan dalam pelayar ini sahaja).'],
+ add:['Add student','Tambah pelajar'], badCode:['That code isn\'t valid.','Kod itu tidak sah.'], added:['Student added','Pelajar ditambah'],
+ viaCode:['via code','melalui kod'], remove:['Remove','Buang'], you:['You','Anda'],
+ refLbl:['Real-world counterpart','Rujukan dunia sebenar'],
+ classTitle:['Progress by job class','Kemajuan mengikut kelas'],
+ classHint:['How students in each hero class are doing.','Prestasi pelajar dalam setiap kelas wira.'],
+ nStudents:n=>[`${n} student${n===1?'':'s'}`,`${n} pelajar`], avgLv:['Avg level','Purata tahap'], bonusZ:['Bonus zones','Zon bonus'],
+ joinTitle:['Join a Class','Sertai Kelas'],
+ joinSub:['Enter the Game PIN from your teacher. No account needed.','Masukkan PIN Permainan daripada guru anda. Tiada akaun diperlukan.'],
+ pinLbl:['Game PIN','PIN Permainan'], nickLbl:['Nickname','Nama samaran'],
+ joinBtn:['Join ▶','Sertai ▶'], joinBtnShort:['🎮 Join with Game PIN','🎮 Sertai dengan PIN'],
+ badPin:['The PIN has 6 digits.','PIN mempunyai 6 digit.'], needNick:['Enter a nickname.','Masukkan nama samaran.'],
+ joining:['Joining…','Menyertai…'], noGame:['No class found with that PIN.','Tiada kelas dengan PIN itu.'],
+ closed:['This class is locked by the teacher.','Kelas ini telah dikunci oleh guru.'], joined:['✔ Joined the class!','✔ Berjaya menyertai kelas!'],
+ netErr:['Can\'t connect right now. Check your internet and try again.','Tidak dapat menyambung sekarang. Semak internet anda dan cuba lagi.'],
+ notSetup:['Live classes aren\'t set up yet: the teacher needs to add the Firebase settings (see SETUP.md). You can still play solo.','Kelas langsung belum disediakan: guru perlu menambah tetapan Firebase (lihat SETUP.md). Anda masih boleh bermain sendiri.'],
+ hostBtn:['👩‍🏫 Teacher: Host a Class','👩‍🏫 Guru: Anjurkan Kelas'], hostTitle:['👩‍🏫 Host a Class','👩‍🏫 Anjurkan Kelas'],
+ hostSub:['Create a class to get a Game PIN. Students join with the PIN and a nickname, with no account needed.','Cipta kelas untuk mendapatkan PIN Permainan. Pelajar menyertai dengan PIN dan nama samaran, tanpa akaun.'],
+ roomName:['Class name','Nama kelas'], roomPh:['e.g. 4 Sains 1','cth. 4 Sains 1'],
+ createRoom:['Create class & get PIN','Cipta kelas & dapatkan PIN'], creating:['Creating…','Mencipta…'],
+ myRooms:['My classes','Kelas saya'], noRooms:['No classes yet.','Belum ada kelas.'], openDash:['Open','Buka'],
+ hostNote:['Your classes are linked to this browser. Use the same device and browser to manage them.','Kelas anda dipautkan kepada pelayar ini. Gunakan peranti dan pelayar yang sama untuk mengurusnya.'],
+ joinAt:['Join at','Sertai di'], gamePin:['Game PIN','PIN Permainan'],
+ isOpen:['Open for joining','Dibuka untuk penyertaan'], isClosed:['Locked','Dikunci'],
+ lock:['🔒 Lock class','🔒 Kunci kelas'], unlock:['🔓 Unlock class','🔓 Buka kelas'],
+ leader:['🏆 Leaderboard','🏆 Papan Pendahulu'], ptsLbl:['pts','mata'], sPts:['Points','Mata'],
+ ptsRule:['Points: 100 per correct answer + 500 per zone cleared.','Mata: 100 bagi setiap jawapan betul + 500 bagi setiap zon selesai.'],
+ rmSure:['Tap again to remove','Ketik sekali lagi untuk membuang'],
+ needClass:['Join a class with a Game PIN to see the leaderboard and class progress.','Sertai kelas dengan PIN Permainan untuk melihat papan pendahulu dan kemajuan kelas.'],
+ syncErr:['Your progress couldn\'t be saved to the class yet. It will keep retrying.','Kemajuan anda belum dapat disimpan ke kelas. Ia akan terus dicuba semula.'],
+ syncLocked:['The class is locked, so new progress isn\'t being saved to it.','Kelas dikunci, jadi kemajuan baharu tidak disimpan ke kelas.'],
+ inClass:['Class','Kelas'], leave:['Leave class','Keluar kelas'],
+ classBtn:['🏆 Leaderboard & class progress','🏆 Papan pendahulu & kemajuan kelas'],
+ soloNote:['Playing solo. Join a class to appear on the leaderboard.','Bermain sendiri. Sertai kelas untuk muncul di papan pendahulu.'],
+ justNow:['just now','baru sahaja'], mAgo:n=>[`${n} min ago`,`${n} minit lalu`], hAgo:n=>[`${n}h ago`,`${n} jam lalu`], dAgo:n=>[`${n}d ago`,`${n} hari lalu`]
+};
+const t = (k,...a) => { const v = T[k]; return L(typeof v==='function' ? v(...a) : v); };
+
+// ======================= CONTENT =======================
+// Q(enQuestion, enOptions, enExplanation, bmQuestion, bmOptions, bmExplanation) — correct answer is always option 0 (shuffled on display)
+const Q = (eq,eo,ee,bq,bo,be) => ({en:[eq,eo,ee], bm:[bq,bo,be]});
+const ZONES = [
+ {id:'cell', form:4, icon:'🏰', name:['Cell Citadel','Kubu Sel'], topic:['Cell Biology & Organisation','Biologi Sel & Organisasi Sel'],
+  minion:{name:['Stray Prokaryote','Prokariot Liar'], icon:'🦠'}, boss:{name:['Nucleus Tyrant','Raja Nukleus Zalim'], icon:'👁️'},
+  q:[
+   Q('Which organelle is the site of aerobic respiration?',['Mitochondrion','Ribosome','Golgi apparatus','Nucleus'],'Mitochondria carry out aerobic respiration and produce most of the cell\'s ATP. Active cells such as muscle and sperm cells have many of them.',
+     'Organel manakah tapak respirasi aerob?',['Mitokondrion','Ribosom','Jasad Golgi','Nukleus'],'Mitokondrion menjalankan respirasi aerob dan menghasilkan kebanyakan ATP sel. Sel aktif seperti sel otot dan sel sperma mempunyai banyak mitokondrion.'),
+   Q('Which structure is found in plant cells but NOT in animal cells?',['Cell wall','Plasma membrane','Mitochondrion','Ribosome'],'Plant cells have a cellulose cell wall, chloroplasts and a large central vacuole. Animal cells do not.',
+     'Struktur manakah terdapat dalam sel tumbuhan tetapi TIDAK dalam sel haiwan?',['Dinding sel','Membran plasma','Mitokondrion','Ribosom'],'Sel tumbuhan mempunyai dinding sel selulosa, kloroplas dan vakuol tengah yang besar. Sel haiwan tidak mempunyainya.'),
+   Q('What is the function of the ribosome?',['Site of protein synthesis','Site of photosynthesis','Stores genetic material','Digests worn-out organelles'],'Ribosomes are where proteins are synthesised. Many are attached to the rough endoplasmic reticulum.',
+     'Apakah fungsi ribosom?',['Tapak sintesis protein','Tapak fotosintesis','Menyimpan bahan genetik','Mencerna organel yang rosak'],'Ribosom ialah tapak sintesis protein. Banyak ribosom melekat pada jalinan endoplasma kasar.'),
+   Q('Which is the correct order of cell organisation in multicellular organisms?',['Cell → tissue → organ → system → organism','Tissue → cell → organ → system → organism','Cell → organ → tissue → system → organism','Cell → tissue → system → organ → organism'],'Cells form tissues, tissues form organs, organs form systems, and systems make up the organism.',
+     'Manakah urutan organisasi sel yang betul dalam organisma multisel?',['Sel → tisu → organ → sistem → organisma','Tisu → sel → organ → sistem → organisma','Sel → organ → tisu → sistem → organisma','Sel → tisu → sistem → organ → organisma'],'Sel membentuk tisu, tisu membentuk organ, organ membentuk sistem, dan sistem membentuk organisma.'),
+   Q('Which organelle modifies, packages and transports proteins?',['Golgi apparatus','Lysosome','Smooth endoplasmic reticulum','Centriole'],'The Golgi apparatus modifies proteins (e.g. adds carbohydrates), packs them into vesicles and sends them out of the cell.',
+     'Organel manakah mengubah suai, membungkus dan mengangkut protein?',['Jasad Golgi','Lisosom','Jalinan endoplasma licin','Sentriol'],'Jasad Golgi mengubah suai protein (cth. menambah karbohidrat), membungkusnya dalam vesikel dan menghantarnya keluar dari sel.'),
+   Q('Which of these is a unicellular organism?',['<i>Amoeba</i> sp.','<i>Hydra</i> sp.','<i>Spirogyra</i> sp.','Fern'],'<i>Amoeba</i> sp. and <i>Paramecium</i> sp. are unicellular: one cell does every life process.',
+     'Manakah antara berikut organisma unisel?',['<i>Amoeba</i> sp.','<i>Hydra</i> sp.','<i>Spirogyra</i> sp.','Paku pakis'],'<i>Amoeba</i> sp. dan <i>Paramecium</i> sp. ialah organisma unisel: satu sel menjalankan semua proses hidup.'),
+   Q('Which organelle contains hydrolytic enzymes that digest worn-out organelles?',['Lysosome','Vacuole','Chloroplast','Ribosome'],'Lysosomes are membrane-bound sacs of hydrolytic enzymes. They break down worn-out organelles and engulfed material.',
+     'Organel manakah mengandungi enzim hidrolitik yang mencerna organel yang rosak?',['Lisosom','Vakuol','Kloroplas','Ribosom'],'Lisosom ialah kantung bermembran yang mengandungi enzim hidrolitik. Ia mengurai organel yang rosak dan bahan yang ditelan.')
+  ]},
+ {id:'membrane', form:4, icon:'🚪', name:['Membrane Gates','Gerbang Membran'], topic:['Movement of Substances across the Plasma Membrane','Pergerakan Bahan Merentasi Membran Plasma'],
+  minion:{name:['Solute Imp','Jembalang Zat Terlarut'], icon:'💧'}, boss:{name:['The Plasmolyser','Sang Plasmolisis'], icon:'🧂'},
+  q:[
+   Q('A red blood cell is placed in distilled water. What happens?',['It swells and bursts (haemolysis)','It shrinks (crenation)','It undergoes plasmolysis','No change'],'Distilled water is hypotonic, so water enters by osmosis. With no cell wall, the red blood cell swells and bursts. This is haemolysis.',
+     'Sel darah merah dimasukkan ke dalam air suling. Apakah yang berlaku?',['Sel mengembang dan pecah (hemolisis)','Sel mengecut (krenasi)','Sel mengalami plasmolisis','Tiada perubahan'],'Air suling ialah larutan hipotonik, jadi air meresap masuk secara osmosis. Tanpa dinding sel, sel darah merah mengembang dan pecah. Ini ialah hemolisis.'),
+   Q('A plant cell is placed in a concentrated sucrose solution. What happens?',['Plasmolysis','Haemolysis','It becomes more turgid','It bursts'],'The solution is hypertonic, so water leaves by osmosis. The protoplasm shrinks away from the cell wall. This is plasmolysis.',
+     'Sel tumbuhan dimasukkan ke dalam larutan sukrosa pekat. Apakah yang berlaku?',['Plasmolisis','Hemolisis','Sel menjadi lebih segah','Sel pecah'],'Larutan itu hipertonik, jadi air meresap keluar secara osmosis. Protoplasma mengecut dan tertanggal daripada dinding sel. Ini ialah plasmolisis.'),
+   Q('Which process requires energy (ATP)?',['Active transport','Simple diffusion','Osmosis','Facilitated diffusion'],'Active transport uses carrier proteins and ATP to move substances AGAINST the concentration gradient.',
+     'Proses manakah memerlukan tenaga (ATP)?',['Pengangkutan aktif','Resapan ringkas','Osmosis','Resapan berbantu'],'Pengangkutan aktif menggunakan protein pembawa dan ATP untuk menggerakkan bahan MELAWAN kecerunan kepekatan.'),
+   Q('Facilitated diffusion moves substances…',['down a concentration gradient through carrier or channel proteins, without ATP','against a concentration gradient using ATP','only through the phospholipid bilayer','only for water molecules'],'Facilitated diffusion is passive (no ATP). Molecules like glucose and amino acids use carrier or channel proteins to move down their gradient.',
+     'Resapan berbantu menggerakkan bahan…',['mengikut kecerunan kepekatan melalui protein pembawa atau protein liang, tanpa ATP','melawan kecerunan kepekatan menggunakan ATP','hanya melalui dwilapisan fosfolipid','hanya untuk molekul air'],'Resapan berbantu ialah proses pasif (tanpa ATP). Molekul seperti glukosa dan asid amino menggunakan protein pembawa atau protein liang untuk bergerak mengikut kecerunan kepekatan.'),
+   Q('Who proposed the fluid mosaic model of the plasma membrane?',['Singer and Nicolson','Watson and Crick','Schleiden and Schwann','Robert Hooke'],'Singer and Nicolson proposed it in 1972. Proteins float in a fluid phospholipid bilayer like a mosaic.',
+     'Siapakah yang mencadangkan model mozek bendalir membran plasma?',['Singer dan Nicolson','Watson dan Crick','Schleiden dan Schwann','Robert Hooke'],'Singer dan Nicolson mencadangkannya pada tahun 1972. Protein terapung dalam dwilapisan fosfolipid yang bendalir seperti mozek.'),
+   Q('In osmosis, water moves from a…',['hypotonic solution to a hypertonic solution','hypertonic solution to a hypotonic solution','isotonic solution to a hypertonic solution only','high solute concentration to low solute concentration'],'Water moves across a partially permeable membrane from the hypotonic solution (more water, less solute) to the hypertonic solution.',
+     'Dalam osmosis, air bergerak dari…',['larutan hipotonik ke larutan hipertonik','larutan hipertonik ke larutan hipotonik','larutan isotonik ke larutan hipertonik sahaja','kepekatan zat terlarut tinggi ke kepekatan zat terlarut rendah'],'Air bergerak merentasi membran separa telap dari larutan hipotonik (lebih banyak air, kurang zat terlarut) ke larutan hipertonik.'),
+   Q('Why are wilted vegetables sprinkled with water by traders at the market?',['Water enters the cells by osmosis, making them turgid','Water kills bacteria on the surface','Water dissolves the cell walls','Water removes excess salt by active transport'],'The water is hypotonic to the cell sap. It enters by osmosis, so the cells become turgid and the vegetables look fresh again.',
+     'Mengapakah peniaga di pasar merenjiskan air pada sayur yang layu?',['Air meresap masuk ke dalam sel secara osmosis, menjadikannya segah','Air membunuh bakteria di permukaan','Air melarutkan dinding sel','Air menyingkirkan garam berlebihan melalui pengangkutan aktif'],'Air itu hipotonik berbanding sap sel. Air meresap masuk secara osmosis, sel menjadi segah dan sayur kelihatan segar semula.')
+  ]},
+ {id:'enzyme', form:4, icon:'⚒️', name:['Enzyme Forge','Tempaan Enzim'], topic:['Chemical Composition of the Cell, Metabolism & Enzymes','Komposisi Kimia dalam Sel, Metabolisme & Enzim'],
+  minion:{name:['Substrate Sprite','Pari-pari Substrat'], icon:'✨'}, boss:{name:['The Denatured Colossus','Gergasi Ternyahasli'], icon:'🗿'},
+  q:[
+   Q('In the lock and key hypothesis, the "lock" represents the…',['enzyme (its active site)','substrate','product','cofactor'],'The enzyme\'s active site is the lock. Only a substrate with a complementary shape (the key) can fit.',
+     'Dalam hipotesis mangga dan kunci, "mangga" mewakili…',['enzim (tapak aktifnya)','substrat','hasil','kofaktor'],'Tapak aktif enzim ialah mangga. Hanya substrat dengan bentuk yang sepadan (kunci) dapat memadaninya.'),
+   Q('What happens to an enzyme at a very high temperature (e.g. 70°C)?',['It is denatured and its active site changes shape','It works faster forever','It becomes a substrate','It changes into a carbohydrate'],'High heat breaks the bonds holding the enzyme\'s 3D shape. The active site changes and no longer fits the substrate. This is denaturation, and it cannot be reversed.',
+     'Apakah yang berlaku kepada enzim pada suhu yang sangat tinggi (cth. 70°C)?',['Enzim ternyahasli dan bentuk tapak aktifnya berubah','Enzim bertindak lebih cepat selama-lamanya','Enzim menjadi substrat','Enzim berubah menjadi karbohidrat'],'Haba yang tinggi memutuskan ikatan yang mengekalkan bentuk 3D enzim. Tapak aktif berubah dan tidak lagi sepadan dengan substrat. Ini ialah penyahaslian, dan ia tidak boleh berbalik.'),
+   Q('What is the optimum pH of pepsin in the stomach?',['About pH 2','About pH 7','About pH 8','About pH 12'],'Pepsin works in the acidic stomach (hydrochloric acid), so its optimum pH is about 2.',
+     'Apakah pH optimum pepsin di dalam perut?',['Kira-kira pH 2','Kira-kira pH 7','Kira-kira pH 8','Kira-kira pH 12'],'Pepsin bertindak dalam perut yang berasid (asid hidroklorik), jadi pH optimumnya kira-kira 2.'),
+   Q('What are the basic units (monomers) of proteins?',['Amino acids','Glucose','Fatty acids and glycerol','Nucleotides'],'Amino acids join by peptide bonds through condensation to form polypeptides and proteins.',
+     'Apakah unit asas (monomer) protein?',['Asid amino','Glukosa','Asid lemak dan gliserol','Nukleotida'],'Asid amino bergabung melalui ikatan peptida secara kondensasi untuk membentuk polipeptida dan protein.'),
+   Q('A food sample gives a brick-red precipitate when heated with Benedict\'s solution. It contains…',['reducing sugar','starch','protein','lipid'],'Benedict\'s test detects reducing sugars (e.g. glucose). Starch uses the iodine test and protein uses the Biuret test.',
+     'Sampel makanan menghasilkan mendakan merah bata apabila dipanaskan dengan larutan Benedict. Sampel itu mengandungi…',['gula penurun','kanji','protein','lipid'],'Ujian Benedict mengesan gula penurun (cth. glukosa). Kanji diuji dengan ujian iodin dan protein dengan ujian Biuret.'),
+   Q('Which bond joins two monosaccharides to form a disaccharide?',['Glycosidic bond','Peptide bond','Ester bond','Hydrogen bond'],'Two monosaccharides join by a glycosidic bond in a condensation reaction, releasing one water molecule.',
+     'Ikatan manakah menggabungkan dua monosakarida untuk membentuk disakarida?',['Ikatan glikosidik','Ikatan peptida','Ikatan ester','Ikatan hidrogen'],'Dua monosakarida bergabung melalui ikatan glikosidik dalam tindak balas kondensasi, membebaskan satu molekul air.'),
+   Q('Which enzymes are synthesised by ribosomes on the rough ER and secreted out of the cell?',['Extracellular enzymes','Intracellular enzymes','All enzymes inside the nucleus','Enzymes in lysosomes only'],'Extracellular enzymes (e.g. amylase) are made on rough ER ribosomes, processed by the Golgi apparatus and secreted by exocytosis.',
+     'Enzim manakah disintesis oleh ribosom pada JE kasar dan dirembeskan keluar dari sel?',['Enzim luar sel','Enzim dalam sel','Semua enzim di dalam nukleus','Enzim dalam lisosom sahaja'],'Enzim luar sel (cth. amilase) disintesis oleh ribosom pada JE kasar, diproses oleh jasad Golgi dan dirembeskan secara eksositosis.')
+  ]},
+ {id:'mitosis', form:4, icon:'🌀', name:['Mitosis Labyrinth','Labirin Mitosis'], topic:['Cell Division','Pembahagian Sel'],
+  minion:{name:['Spindle Spider','Labah-labah Gelendong'], icon:'🕷️'}, boss:{name:['The Tumour Kraken','Kraken Tumor'], icon:'🦑'},
+  q:[
+   Q('At which stage of mitosis do chromosomes line up at the metaphase plate (equator)?',['Metaphase','Prophase','Anaphase','Telophase'],'In metaphase, spindle fibres line the chromosomes up at the metaphase plate.',
+     'Pada peringkat manakah dalam mitosis kromosom tersusun di satah metafasa (khatulistiwa)?',['Metafasa','Profasa','Anafasa','Telofasa'],'Semasa metafasa, gentian gelendong menyusun kromosom di satah metafasa.'),
+   Q('Mitosis produces…',['two genetically identical diploid daughter cells','four genetically different haploid cells','two haploid gametes','four diploid cells'],'Mitosis gives two daughter cells with the same chromosome number and genetic content as the parent cell (2n).',
+     'Mitosis menghasilkan…',['dua sel anak diploid yang seiras secara genetik','empat sel haploid yang berbeza secara genetik','dua gamet haploid','empat sel diploid'],'Mitosis menghasilkan dua sel anak dengan bilangan kromosom dan kandungan genetik yang sama seperti sel induk (2n).'),
+   Q('Crossing over occurs during…',['Prophase I of meiosis','Metaphase of mitosis','Anaphase II of meiosis','Interphase'],'In prophase I, homologous chromosomes pair up (synapsis) and exchange segments at the chiasmata. This causes genetic variation.',
+     'Pindah silang berlaku semasa…',['Profasa I meiosis','Metafasa mitosis','Anafasa II meiosis','Interfasa'],'Semasa profasa I, kromosom homolog berpasangan (sinapsis) dan bertukar segmen di kiasma. Ini menyebabkan variasi genetik.'),
+   Q('Meiosis produces…',['four haploid daughter cells','two diploid daughter cells','four diploid daughter cells','two haploid daughter cells'],'Meiosis has two divisions (I and II) and forms four haploid (n) cells, which become gametes.',
+     'Meiosis menghasilkan…',['empat sel anak haploid','dua sel anak diploid','empat sel anak diploid','dua sel anak haploid'],'Meiosis melibatkan dua pembahagian (I dan II) dan menghasilkan empat sel haploid (n) yang menjadi gamet.'),
+   Q('In mitosis, sister chromatids separate and move to opposite poles during…',['Anaphase','Metaphase','Prophase','Cytokinesis'],'In anaphase, the centromeres divide and spindle fibres pull the sister chromatids to opposite poles.',
+     'Dalam mitosis, kromatid kembar berpisah dan bergerak ke kutub bertentangan semasa…',['Anafasa','Metafasa','Profasa','Sitokinesis'],'Semasa anafasa, sentromer terbahagi dan gentian gelendong menarik kromatid kembar ke kutub bertentangan.'),
+   Q('How does cytokinesis happen in plant cells?',['A cell plate forms in the middle of the cell','A cleavage furrow pinches the cell','The nucleus divides into two','The cell wall dissolves completely'],'Plant cells have a rigid cell wall, so vesicles fuse to form a cell plate. Animal cells use a cleavage furrow.',
+     'Bagaimanakah sitokinesis berlaku dalam sel tumbuhan?',['Plat sel terbentuk di tengah-tengah sel','Alur pembelahan mencerut sel','Nukleus terbahagi kepada dua','Dinding sel larut sepenuhnya'],'Sel tumbuhan mempunyai dinding sel yang tegar, jadi vesikel bergabung membentuk plat sel. Sel haiwan menggunakan alur pembelahan.'),
+   Q('Cancer happens when…',['cells undergo uncontrolled mitosis','cells stop dividing completely','meiosis happens in body cells','chromosomes stop replicating'],'Cancer cells divide by mitosis without control and form a tumour. Mutagens such as radiation and carcinogens can trigger it.',
+     'Kanser berlaku apabila…',['sel mengalami mitosis yang tidak terkawal','sel berhenti membahagi sepenuhnya','meiosis berlaku dalam sel soma','kromosom berhenti mereplikasi'],'Sel kanser membahagi secara mitosis tanpa kawalan dan membentuk tumor. Mutagen seperti sinaran dan karsinogen boleh mencetuskannya.')
+  ]},
+ {id:'lungs', form:4, icon:'🔥', name:['Lungs of Fire','Paru-paru Api'], topic:['Cellular Respiration & Respiratory Systems','Respirasi Sel & Sistem Respirasi'],
+  minion:{name:['Carbon Monoxide Wisp','Wap Karbon Monoksida'], icon:'💨'}, boss:{name:['The Anaerobic Wyrm','Naga Anaerob'], icon:'🐲'},
+  q:[
+   Q('During vigorous exercise, anaerobic respiration in human muscles produces…',['lactic acid','ethanol and carbon dioxide','glucose','oxygen'],'Without enough oxygen, muscle cells break glucose down into lactic acid, releasing a little energy. The build-up of lactic acid causes muscle fatigue.',
+     'Semasa senaman cergas, respirasi anaerob dalam otot manusia menghasilkan…',['asid laktik','etanol dan karbon dioksida','glukosa','oksigen'],'Tanpa oksigen yang mencukupi, sel otot mengurai glukosa kepada asid laktik dan membebaskan sedikit tenaga. Pengumpulan asid laktik menyebabkan kelesuan otot.'),
+   Q('What is produced when yeast carries out fermentation?',['Ethanol, carbon dioxide and energy','Lactic acid and energy','Oxygen and glucose','Water and carbon dioxide only'],'Yeast fermentation (anaerobic) gives ethanol, CO₂ and a little energy. It is used in making bread and tapai.',
+     'Apakah yang dihasilkan apabila yis menjalankan fermentasi?',['Etanol, karbon dioksida dan tenaga','Asid laktik dan tenaga','Oksigen dan glukosa','Air dan karbon dioksida sahaja'],'Fermentasi yis (anaerob) menghasilkan etanol, CO₂ dan sedikit tenaga. Ia digunakan dalam pembuatan roti dan tapai.'),
+   Q('Where does gaseous exchange take place in humans?',['Alveoli','Trachea','Bronchus','Larynx'],'Alveoli are thin, moist, numerous and surrounded by blood capillaries, which makes them efficient for gaseous exchange.',
+     'Di manakah pertukaran gas berlaku dalam manusia?',['Alveolus','Trakea','Bronkus','Laring'],'Alveolus nipis, lembap, banyak dan diliputi kapilari darah, menjadikannya cekap untuk pertukaran gas.'),
+   Q('What happens to the diaphragm during inhalation?',['It contracts and flattens','It relaxes and curves upwards','It does not move','It moves towards the lungs'],'During inhalation the diaphragm contracts and flattens and the external intercostal muscles contract. Thoracic volume rises, pressure falls, and air rushes in.',
+     'Apakah yang berlaku kepada diafragma semasa tarikan nafas?',['Mengecut dan mendatar','Mengendur dan melengkung ke atas','Tidak bergerak','Bergerak ke arah peparu'],'Semasa tarikan nafas, diafragma mengecut dan mendatar dan otot interkosta luar mengecut. Isi padu toraks bertambah, tekanan berkurang dan udara masuk.'),
+   Q('What is the respiratory structure of an insect such as a grasshopper?',['Tracheal system','Gills','Lungs','Moist skin'],'Insects breathe through spiracles connected to tracheae and tracheoles, which carry air directly to the cells.',
+     'Apakah struktur respirasi serangga seperti belalang?',['Sistem trakea','Insang','Peparu','Kulit lembap'],'Serangga bernafas melalui spirakel yang bersambung dengan trakea dan trakeol, yang membawa udara terus ke sel.'),
+   Q('What is oxygen debt?',['The oxygen needed to break down lactic acid after vigorous exercise','Oxygen stored in the lungs','Lack of oxygen in fish gills','Oxygen used for photosynthesis'],'After exercise you keep breathing fast to repay the oxygen debt. The extra oxygen oxidises lactic acid.',
+     'Apakah hutang oksigen?',['Oksigen yang diperlukan untuk mengurai asid laktik selepas senaman cergas','Oksigen yang disimpan dalam peparu','Kekurangan oksigen dalam insang ikan','Oksigen yang digunakan untuk fotosintesis'],'Selepas bersenam, anda terus bernafas dengan laju untuk membayar hutang oksigen. Oksigen tambahan mengoksidakan asid laktik.'),
+   Q('Why is carbon monoxide dangerous?',['It binds to haemoglobin more strongly than oxygen','It dissolves the alveoli','It turns blood into lactic acid','It blocks the trachea physically'],'Carbon monoxide forms stable carboxyhaemoglobin, which lowers the blood\'s ability to carry oxygen.',
+     'Mengapakah karbon monoksida berbahaya?',['Ia bergabung dengan hemoglobin lebih kuat daripada oksigen','Ia melarutkan alveolus','Ia menukar darah menjadi asid laktik','Ia menyekat trakea secara fizikal'],'Karbon monoksida membentuk karboksihemoglobin yang stabil, mengurangkan keupayaan darah mengangkut oksigen.')
+  ]},
+ {id:'blood', form:4, icon:'🩸', name:['Bloodstream Rapids','Jeram Aliran Darah'], topic:['Human Transport & Body Defence','Pengangkutan dalam Manusia & Keimunan'],
+  minion:{name:['Pathogen Goblin','Goblin Patogen'], icon:'👺'}, boss:{name:['The Plague Lord','Raja Wabak'], icon:'💀'},
+  q:[
+   Q('Which blood vessel carries oxygenated blood from the lungs to the heart?',['Pulmonary vein','Pulmonary artery','Vena cava','Aorta'],'The pulmonary vein is the only vein carrying oxygenated blood. It returns blood from the lungs to the left atrium.',
+     'Salur darah manakah membawa darah beroksigen dari peparu ke jantung?',['Vena pulmonari','Arteri pulmonari','Vena kava','Aorta'],'Vena pulmonari ialah satu-satunya vena yang membawa darah beroksigen. Ia membawa darah dari peparu ke atrium kiri.'),
+   Q('What is the natural pacemaker of the heart?',['Sinoatrial (SA) node','Atrioventricular (AV) node','Bundle of His','Purkinje fibres'],'The SA node in the right atrium starts the electrical impulses that set the heartbeat.',
+     'Apakah perentak semula jadi jantung?',['Nodus sinoatrium (SA)','Nodus atrioventrikel (AV)','Berkas His','Gentian Purkinje'],'Nodus SA di atrium kanan memulakan impuls elektrik yang menentukan degupan jantung.'),
+   Q('Which cells produce antibodies?',['Lymphocytes','Erythrocytes','Platelets','Neutrophils only'],'Lymphocytes (B lymphocytes) make antibodies specific to an antigen.',
+     'Sel manakah menghasilkan antibodi?',['Limfosit','Eritrosit','Platlet','Neutrofil sahaja'],'Limfosit (limfosit B) menghasilkan antibodi yang khusus untuk sesuatu antigen.'),
+   Q('Vaccination gives which type of immunity?',['Artificial active immunity','Natural passive immunity','Artificial passive immunity','Natural active immunity'],'A vaccine stimulates the body to make its own antibodies and memory cells, so this is active immunity. It is artificial because it comes from an injection.',
+     'Pemvaksinan memberikan keimunan jenis apa?',['Keimunan aktif buatan','Keimunan pasif semula jadi','Keimunan pasif buatan','Keimunan aktif semula jadi'],'Vaksin merangsang badan menghasilkan antibodi dan sel memori sendiri, jadi ia keimunan aktif. Ia buatan kerana diperoleh melalui suntikan.'),
+   Q('An injection of antiserum against tetanus gives…',['Artificial passive immunity','Artificial active immunity','Natural active immunity','Natural passive immunity'],'Antiserum contains ready-made antibodies, so the body is protected straight away. It does not last, because no memory cells are made.',
+     'Suntikan antiserum terhadap tetanus memberikan…',['Keimunan pasif buatan','Keimunan aktif buatan','Keimunan aktif semula jadi','Keimunan pasif semula jadi'],'Antiserum mengandungi antibodi siap sedia, jadi badan dilindungi serta-merta. Ia tidak kekal lama kerana tiada sel memori dihasilkan.'),
+   Q('Which ABO blood group is called the universal donor?',['Group O','Group AB','Group A','Group B'],'Group O red blood cells have no A or B antigens, so they can be given to any ABO group.',
+     'Kumpulan darah ABO manakah dikenali sebagai penderma universal?',['Kumpulan O','Kumpulan AB','Kumpulan A','Kumpulan B'],'Sel darah merah kumpulan O tidak mempunyai antigen A atau B, jadi ia boleh diberikan kepada semua kumpulan ABO.'),
+   Q('Which vessels return excess tissue fluid to the bloodstream?',['Lymphatic vessels','Arteries','Capillaries of the lungs','Hepatic portal vein'],'Excess tissue fluid enters lymphatic capillaries as lymph and is returned to the blood through the subclavian veins.',
+     'Salur manakah mengembalikan bendalir tisu berlebihan ke dalam aliran darah?',['Salur limfa','Arteri','Kapilari peparu','Vena portal hepar'],'Bendalir tisu berlebihan memasuki kapilari limfa sebagai limfa dan dikembalikan ke darah melalui vena subklavikel.')
+  ]},
+ {id:'nerve', form:4, icon:'⚡', name:['Nerve Spire','Menara Saraf'], topic:['Coordination, Response & Homeostasis','Koordinasi, Gerak Balas & Homeostasis'],
+  minion:{name:['Static Bat','Kelawar Statik'], icon:'🦇'}, boss:{name:['The Rogue Hypothalamus','Hipotalamus Durjana'], icon:'🧠'},
+  q:[
+   Q('Which neurone carries impulses from a receptor to the central nervous system?',['Afferent (sensory) neurone','Efferent (motor) neurone','Interneurone','Effector neurone'],'Afferent neurones carry impulses from receptors to the CNS. Efferent neurones carry them from the CNS to effectors.',
+     'Neuron manakah membawa impuls dari reseptor ke sistem saraf pusat?',['Neuron aferen (deria)','Neuron eferen (motor)','Neuron perantaraan','Neuron efektor'],'Neuron aferen membawa impuls dari reseptor ke sistem saraf pusat. Neuron eferen membawa impuls dari sistem saraf pusat ke efektor.'),
+   Q('Which hormone lowers blood glucose level?',['Insulin','Glucagon','Adrenaline','ADH'],'Insulin from the β cells of the islets of Langerhans helps the liver turn excess glucose into glycogen.',
+     'Hormon manakah menurunkan aras glukosa darah?',['Insulin','Glukagon','Adrenalina','ADH'],'Insulin daripada sel β pulau Langerhans membantu hati menukar glukosa berlebihan kepada glikogen.'),
+   Q('In a withdrawal reflex arc, which neurone in the spinal cord connects the afferent and efferent neurones?',['Interneurone','Sensory neurone','Motor neurone','Receptor'],'The interneurone in the grey matter of the spinal cord passes the impulse from the afferent neurone to the efferent neurone.',
+     'Dalam arka refleks tarik balik, neuron manakah dalam saraf tunjang menghubungkan neuron aferen dan neuron eferen?',['Neuron perantaraan','Neuron deria','Neuron motor','Reseptor'],'Neuron perantaraan dalam jirim kelabu saraf tunjang memindahkan impuls dari neuron aferen ke neuron eferen.'),
+   Q('When the body is dehydrated, which hormone is secreted more?',['Antidiuretic hormone (ADH)','Insulin','Thyroxine','Oestrogen'],'The pituitary gland releases more ADH. The distal convoluted tubule and collecting duct become more permeable, so more water is reabsorbed and the urine is concentrated.',
+     'Apabila badan mengalami dehidrasi, hormon manakah lebih banyak dirembeskan?',['Hormon antidiuresis (ADH)','Insulin','Tiroksina','Estrogen'],'Kelenjar pituitari merembeskan lebih banyak ADH. Tubul berlingkar distal dan duktus pengumpul menjadi lebih telap, jadi lebih banyak air diserap semula dan air kencing menjadi pekat.'),
+   Q('Where in the nephron does ultrafiltration occur?',['Glomerulus into Bowman\'s capsule','Loop of Henle','Collecting duct','Distal convoluted tubule'],'High blood pressure in the glomerulus forces small molecules into Bowman\'s capsule. This is ultrafiltration.',
+     'Di manakah ultraturasan berlaku dalam nefron?',['Glomerulus ke dalam kapsul Bowman','Gelung Henle','Duktus pengumpul','Tubul berlingkar distal'],'Tekanan darah yang tinggi dalam glomerulus memaksa molekul kecil masuk ke dalam kapsul Bowman. Ini ialah ultraturasan.'),
+   Q('Which part of the brain regulates body temperature?',['Hypothalamus','Cerebellum','Medulla oblongata','Cerebrum'],'The hypothalamus is the body\'s thermostat. It detects changes in blood temperature and triggers corrective responses.',
+     'Bahagian otak manakah mengawal suhu badan?',['Hipotalamus','Serebelum','Medula oblongata','Serebrum'],'Hipotalamus ialah termostat badan. Ia mengesan perubahan suhu darah dan mencetuskan tindak balas pembetulan.'),
+   Q('On a hot day, the arterioles in the skin…',['dilate (vasodilation) so more heat is lost','constrict so less heat is lost','stop carrying blood','produce sweat'],'Vasodilation sends more blood near the skin surface, so more heat is lost by radiation.',
+     'Pada hari yang panas, arteriol di kulit…',['mengembang (vasodilatasi) supaya lebih banyak haba hilang','mengecut supaya kurang haba hilang','berhenti membawa darah','menghasilkan peluh'],'Vasodilatasi membawa lebih banyak darah ke permukaan kulit, jadi lebih banyak haba hilang melalui sinaran.')
+  ]},
+ {id:'photo', form:5, icon:'🌿', name:['Photosynthesis Grove','Rimba Fotosintesis'], topic:['Plant Organisation, Nutrition, Transport & Response','Organisasi, Nutrisi, Pengangkutan & Gerak Balas Tumbuhan'],
+  minion:{name:['Wilting Sprite','Pari-pari Layu'], icon:'🥀'}, boss:{name:['The Shadow Treant','Treant Bayang'], icon:'🌳'},
+  q:[
+   Q('Where does the light-dependent reaction of photosynthesis take place?',['Thylakoid membranes (grana)','Stroma','Cytoplasm','Mitochondria'],'Chlorophyll in the thylakoids (grana) absorbs light. Photolysis of water happens here, producing ATP and NADPH. The light-independent reaction happens in the stroma.',
+     'Di manakah tindak balas bersandarkan cahaya dalam fotosintesis berlaku?',['Membran tilakoid (grana)','Stroma','Sitoplasma','Mitokondrion'],'Klorofil dalam tilakoid (grana) menyerap cahaya. Fotolisis air berlaku di sini, menghasilkan ATP dan NADPH. Tindak balas tak bersandarkan cahaya berlaku dalam stroma.'),
+   Q('What does photolysis of water release as a by-product?',['Oxygen','Carbon dioxide','Glucose','Nitrogen'],'Light splits water into hydrogen ions, electrons and oxygen. The oxygen is released through the stomata.',
+     'Apakah hasil sampingan yang dibebaskan semasa fotolisis air?',['Oksigen','Karbon dioksida','Glukosa','Nitrogen'],'Cahaya menguraikan air kepada ion hidrogen, elektron dan oksigen. Oksigen dibebaskan melalui stoma.'),
+   Q('What does xylem transport?',['Water and mineral salts','Sucrose and amino acids','Hormones only','Oxygen only'],'Xylem vessels carry water and mineral salts up from the roots, driven by transpiration pull, cohesion and adhesion.',
+     'Apakah yang diangkut oleh xilem?',['Air dan garam mineral','Sukrosa dan asid amino','Hormon sahaja','Oksigen sahaja'],'Salur xilem mengangkut air dan garam mineral dari akar ke atas, didorong oleh tarikan transpirasi, daya kohesi dan adhesi.'),
+   Q('The transport of organic substances (e.g. sucrose) in phloem is called…',['translocation','transpiration','guttation','osmosis'],'Translocation moves sucrose through phloem sieve tubes from sources (leaves) to sinks (roots, fruits, growing points).',
+     'Pengangkutan bahan organik (cth. sukrosa) dalam floem dipanggil…',['translokasi','transpirasi','gutasi','osmosis'],'Translokasi menggerakkan sukrosa melalui tiub tapis floem dari sumber (daun) ke sinki (akar, buah, titik tumbuh).'),
+   Q('Stomata open when guard cells…',['become turgid','become flaccid','lose potassium ions','die'],'Guard cells take in K⁺ ions, so water enters by osmosis. They become turgid and curve outwards, opening the stoma.',
+     'Stoma terbuka apabila sel pengawal…',['menjadi segah','menjadi flasid','kehilangan ion kalium','mati'],'Sel pengawal mengambil ion K⁺, jadi air meresap masuk secara osmosis. Sel pengawal menjadi segah dan melengkung ke luar, membuka stoma.'),
+   Q('Which plant hormone causes shoots to bend towards light (phototropism)?',['Auxin','Ethylene','Abscisic acid','Gibberellin'],'Auxin builds up on the shaded side. Cells there elongate faster, so the shoot bends towards the light.',
+     'Hormon tumbuhan manakah menyebabkan pucuk membengkok ke arah cahaya (fototropisme)?',['Auksin','Etilena','Asid absisik','Giberelin'],'Auksin terkumpul di bahagian yang terlindung. Sel di situ memanjang lebih cepat, jadi pucuk membengkok ke arah cahaya.'),
+   Q('In double fertilisation, the endosperm nucleus is…',['triploid (3n)','haploid (n)','diploid (2n)','tetraploid (4n)'],'One male gamete fuses with the two polar nuclei to form the triploid endosperm. The other fuses with the egg cell to form a diploid zygote.',
+     'Dalam persenyawaan ganda dua, nukleus endosperma ialah…',['triploid (3n)','haploid (n)','diploid (2n)','tetraploid (4n)'],'Satu gamet jantan bercantum dengan dua nukleus kutub untuk membentuk endosperma triploid. Satu lagi bercantum dengan sel telur membentuk zigot diploid.')
+  ]},
+ {id:'eco', form:5, icon:'🌏', name:['Ecosystem Plains','Dataran Ekosistem'], topic:['Biodiversity, Ecosystem & Environmental Sustainability','Biodiversiti, Ekosistem & Kelestarian Alam Sekitar'],
+  minion:{name:['Invasive Beetle','Kumbang Invasif'], icon:'🪲'}, boss:{name:['The Smog Behemoth','Raksasa Jerebu'], icon:'🏭'},
+  q:[
+   Q('What are the producers in an ecosystem?',['Green plants (autotrophs)','Herbivores','Decomposers','Carnivores'],'Producers make their own food by photosynthesis. They are the first trophic level.',
+     'Siapakah pengeluar dalam sesuatu ekosistem?',['Tumbuhan hijau (autotrof)','Herbivor','Pengurai','Karnivor'],'Pengeluar mensintesis makanan sendiri melalui fotosintesis. Mereka ialah aras trofik pertama.'),
+   Q('A relationship where one organism benefits and the other is neither harmed nor helped is…',['commensalism','mutualism','parasitism','predation'],'Commensalism, e.g. remora fish and sharks, or epiphytes such as bird\'s nest fern on trees.',
+     'Hubungan di mana satu organisma mendapat manfaat dan organisma lain tidak mendapat manfaat atau mudarat ialah…',['komensalisme','mutualisme','parasitisme','pemangsaan'],'Komensalisme, cth. ikan remora dan jerung, atau epifit seperti paku langsuyar pada pokok.'),
+   Q('<i>Rhizobium</i> in the root nodules of legumes is an example of…',['mutualism','parasitism','commensalism','saprophytism'],'The bacteria fix nitrogen for the plant, and the plant gives the bacteria carbohydrates and shelter. Both benefit.',
+     '<i>Rhizobium</i> dalam nodul akar tumbuhan kekacang ialah contoh…',['mutualisme','parasitisme','komensalisme','saprofitisme'],'Bakteria mengikat nitrogen untuk tumbuhan, dan tumbuhan memberi bakteria karbohidrat serta perlindungan. Kedua-duanya mendapat manfaat.'),
+   Q('Which is the correct order of the classification hierarchy?',['Kingdom, Phylum, Class, Order, Family, Genus, Species','Kingdom, Class, Phylum, Order, Family, Genus, Species','Phylum, Kingdom, Class, Order, Genus, Family, Species','Species, Genus, Order, Family, Class, Phylum, Kingdom'],'From broadest to most specific: Kingdom → Phylum → Class → Order → Family → Genus → Species.',
+     'Manakah urutan hierarki pengelasan yang betul?',['Alam, Filum, Kelas, Order, Famili, Genus, Spesies','Alam, Kelas, Filum, Order, Famili, Genus, Spesies','Filum, Alam, Kelas, Order, Genus, Famili, Spesies','Spesies, Genus, Order, Famili, Kelas, Filum, Alam'],'Dari yang paling umum ke paling khusus: Alam → Filum → Kelas → Order → Famili → Genus → Spesies.'),
+   Q('Which scientific name follows binomial nomenclature correctly?',['<i>Homo sapiens</i>','<i>homo sapiens</i>','<i>Homo Sapiens</i>','<i>HOMO sapiens</i>'],'The genus starts with a capital letter and the species is all lowercase. The name is italicised, or underlined when handwritten.',
+     'Nama saintifik manakah mengikut sistem penamaan binomial dengan betul?',['<i>Homo sapiens</i>','<i>homo sapiens</i>','<i>Homo Sapiens</i>','<i>HOMO sapiens</i>'],'Genus bermula dengan huruf besar dan spesies ditulis dengan huruf kecil sepenuhnya. Nama dicondongkan, atau digaris bawah jika ditulis tangan.'),
+   Q('Eutrophication in a lake is caused mainly by…',['excess nitrates and phosphates from fertilisers','too much dissolved oxygen','an increase in fish population','acid rain only'],'Nutrients cause an algal bloom. Bacteria decompose the dead algae, which raises the BOD and lowers dissolved oxygen, so aquatic life dies.',
+     'Eutrofikasi di tasik disebabkan terutamanya oleh…',['nitrat dan fosfat berlebihan daripada baja','oksigen terlarut yang terlalu banyak','pertambahan populasi ikan','hujan asid sahaja'],'Nutrien menyebabkan ledakan alga. Bakteria mengurai alga yang mati, meningkatkan BOD dan mengurangkan oksigen terlarut, lalu hidupan akuatik mati.'),
+   Q('Which gas is a major contributor to the greenhouse effect?',['Carbon dioxide','Oxygen','Nitrogen','Argon'],'CO₂ (with methane and CFCs) traps heat in the atmosphere, causing global warming.',
+     'Gas manakah penyumbang utama kepada kesan rumah hijau?',['Karbon dioksida','Oksigen','Nitrogen','Argon'],'CO₂ (bersama metana dan CFC) memerangkap haba dalam atmosfera, menyebabkan pemanasan global.')
+  ]},
+ {id:'genetic', form:5, icon:'🐉', name:['Genetic Crypt','Makam Genetik'], topic:['Inheritance, Variation & Genetic Technology','Pewarisan, Variasi & Teknologi Genetik'],
+  minion:{name:['Mutant Allele','Alel Mutan'], icon:'🧬'}, boss:{name:['The Recessive Dragon','Naga Resesif'], icon:'🐉'},
+  q:[
+   Q('Tall (T) is dominant over dwarf (t). In the cross Tt × Tt, what fraction of offspring are tall?',['3/4','1/2','1/4','All of them'],'Offspring: TT, Tt, Tt, tt. Three of the four have at least one T, giving a 3 tall : 1 dwarf phenotypic ratio.',
+     'Tinggi (T) dominan terhadap kerdil (t). Dalam kacukan Tt × Tt, berapakah pecahan anak yang tinggi?',['3/4','1/2','1/4','Semuanya'],'Anak: TT, Tt, Tt, tt. Tiga daripada empat mempunyai sekurang-kurangnya satu T, memberi nisbah fenotip 3 tinggi : 1 kerdil.'),
+   Q('What is the F2 phenotypic ratio of a dihybrid cross?',['9 : 3 : 3 : 1','3 : 1','1 : 2 : 1','1 : 1 : 1 : 1'],'Crossing two heterozygous parents (e.g. RrYy × RrYy) gives 9:3:3:1, as Mendel showed with pea plants.',
+     'Apakah nisbah fenotip F2 bagi kacukan dihibrid?',['9 : 3 : 3 : 1','3 : 1','1 : 2 : 1','1 : 1 : 1 : 1'],'Kacukan dua induk heterozigot (cth. RrYy × RrYy) menghasilkan 9:3:3:1, seperti yang ditunjukkan oleh Mendel dengan pokok kacang pea.'),
+   Q('Haemophilia is a…',['sex-linked recessive disorder carried on the X chromosome','dominant disorder on chromosome 21','disorder caused by an extra chromosome','disorder carried on the Y chromosome'],'The haemophilia allele is recessive and on the X chromosome, so males (XY) are affected more often than females.',
+     'Hemofilia ialah…',['penyakit resesif rangkai seks yang dibawa pada kromosom X','penyakit dominan pada kromosom 21','penyakit akibat kromosom tambahan','penyakit yang dibawa pada kromosom Y'],'Alel hemofilia adalah resesif dan terletak pada kromosom X, jadi lelaki (XY) lebih kerap terjejas berbanding perempuan.'),
+   Q('Which of these shows discontinuous variation?',['ABO blood group','Height','Body mass','Skin colour'],'Discontinuous variation falls into distinct groups with no intermediates. Height, body mass and skin colour vary continuously.',
+     'Manakah antara berikut menunjukkan variasi tak selanjar?',['Kumpulan darah ABO','Ketinggian','Jisim badan','Warna kulit'],'Variasi tak selanjar terbahagi kepada kumpulan yang jelas tanpa perantaraan. Ketinggian, jisim badan dan warna kulit berubah secara selanjar.'),
+   Q('Which enzyme cuts DNA at specific sequences in genetic engineering?',['Restriction enzyme','DNA ligase','Amylase','DNA polymerase'],'Restriction enzymes cut DNA at specific base sequences. DNA ligase then joins the gene into the plasmid vector.',
+     'Enzim manakah memotong DNA pada jujukan tertentu dalam kejuruteraan genetik?',['Enzim pembatasan','DNA ligase','Amilase','DNA polimerase'],'Enzim pembatasan memotong DNA pada jujukan bes tertentu. DNA ligase kemudian mencantumkan gen ke dalam vektor plasmid.'),
+   Q('Down syndrome is caused by…',['an extra copy of chromosome 21 (47 chromosomes)','a recessive allele on the X chromosome','missing the Y chromosome','gene mutation in haemoglobin'],'Non-disjunction during meiosis gives a gamete with an extra chromosome 21, leading to trisomy 21.',
+     'Sindrom Down disebabkan oleh…',['salinan tambahan kromosom 21 (47 kromosom)','alel resesif pada kromosom X','ketiadaan kromosom Y','mutasi gen hemoglobin'],'Tak disjungsi semasa meiosis menghasilkan gamet dengan kromosom 21 tambahan, menyebabkan trisomi 21.'),
+   Q('To find out whether a tall plant is TT or Tt, it is crossed with…',['a homozygous recessive (tt) plant','another tall plant','a heterozygous plant','itself only'],'This is a test cross. All tall offspring means TT. About half dwarf means Tt.',
+     'Untuk menentukan sama ada pokok tinggi ialah TT atau Tt, ia dikacukkan dengan…',['pokok homozigot resesif (tt)','pokok tinggi yang lain','pokok heterozigot','dirinya sendiri sahaja'],'Ini ialah kacukan uji. Jika semua anak tinggi, induk ialah TT. Jika kira-kira separuh kerdil, induk ialah Tt.')
+  ]}
+];
+
+const CLASSES = [
+ {id:'micro', name:['Microbiologist','Ahli Mikrobiologi'], icon:'🔬', hp:40, notes:3, zones:['cell','membrane','enzyme','mitosis'],
+  desc:['Master of the microscopic. Bonus in Cell, Membrane, Enzyme & Mitosis zones.','Pakar dunia mikroskopik. Bonus dalam zon Sel, Membran, Enzim & Mitosis.']},
+ {id:'physician', name:['Physician','Doktor'], icon:'🩺', hp:46, notes:3, zones:['lungs','blood','nerve'],
+  desc:['Healer of bodies. Extra HP. Bonus in Lungs, Blood & Nerve zones.','Penyembuh tubuh. HP tambahan. Bonus dalam zon Paru-paru, Darah & Saraf.']},
+ {id:'botanist', name:['Botanist','Ahli Botani'], icon:'🌱', hp:42, notes:5, zones:['photo','eco','membrane'],
+  desc:['Keeper of the green. Starts with 5 Lab Notes. Bonus in Plant, Ecosystem & Membrane zones.','Penjaga alam hijau. Bermula dengan 5 Nota Makmal. Bonus dalam zon Tumbuhan, Ekosistem & Membran.']},
+ {id:'geneticist', name:['Geneticist','Ahli Genetik'], icon:'🧬', hp:42, notes:3, zones:['genetic','mitosis','cell'],
+  desc:['Reader of the code of life. Bonus in Genetic, Mitosis & Cell zones.','Pembaca kod kehidupan. Bonus dalam zon Genetik, Mitosis & Sel.']}
+];
+
+// ======================= MONSTER ART (custom SVG, real-world inspired) =======================
+const EY = (x1,x2,y,r=6,mood='angry',iris='#111') => {
+  let s = `<circle cx="${x1}" cy="${y}" r="${r}" fill="#fff" stroke="#111" stroke-width="1.5"/><circle cx="${x2}" cy="${y}" r="${r}" fill="#fff" stroke="#111" stroke-width="1.5"/>`
+        + `<circle cx="${x1+r*.2}" cy="${y+r*.15}" r="${r*.52}" fill="${iris}"/><circle cx="${x2-r*.2}" cy="${y+r*.15}" r="${r*.52}" fill="${iris}"/>`
+        + `<circle cx="${x1+r*.35}" cy="${y-r*.1}" r="${r*.16}" fill="#fff"/><circle cx="${x2-r*.05}" cy="${y-r*.1}" r="${r*.16}" fill="#fff"/>`;
+  if(mood==='angry') s += `<path d="M${x1-r-1} ${y-r-5} L${x1+r} ${y-r} M${x2+r+1} ${y-r-5} L${x2-r} ${y-r}" stroke="#111" stroke-width="3" stroke-linecap="round"/>`;
+  if(mood==='sad')   s += `<path d="M${x1-r} ${y-r} L${x1+r} ${y-r-4} M${x2+r} ${y-r} L${x2-r} ${y-r-4}" stroke="#111" stroke-width="2.5" stroke-linecap="round"/>`;
+  return s;
+};
+const FM = (cx,y,w) => `<path d="M${cx-w} ${y} Q${cx} ${y+w*1.1} ${cx+w} ${y} Z" fill="#3a0d14" stroke="#111" stroke-width="1.5" stroke-linejoin="round"/>`
+  + `<path d="M${cx-w*.75} ${y+.5} l2.6 5 l2.6 -5 Z M${cx+w*.75-5.2} ${y+.5} l2.6 5 l2.6 -5 Z" fill="#fff"/>`;
+const FR = (cx,y,w) => `<path d="M${cx-w} ${y+4} Q${cx} ${y-4} ${cx+w} ${y+4}" stroke="#111" stroke-width="3" fill="none" stroke-linecap="round"/>`;
+const SMILE = (cx,y,w,c='#111') => `<path d="M${cx-w} ${y} Q${cx} ${y+w*.9} ${cx+w} ${y}" stroke="${c}" stroke-width="3" fill="none" stroke-linecap="round"/>`;
+const DROP = (x,y,c='#5aa8e8',s=1) => `<path d="M${x} ${y} q${4*s} ${6*s} 0 ${9*s} q${-4*s} ${-3*s} 0 ${-9*s} Z" fill="${c}"/>`;
+const STAR = (x,y,r,c='#fff3c4') => `<path d="M${x} ${y-r} L${x+r*.3} ${y-r*.3} L${x+r} ${y} L${x+r*.3} ${y+r*.3} L${x} ${y+r} L${x-r*.3} ${y+r*.3} L${x-r} ${y} L${x-r*.3} ${y-r*.3} Z" fill="${c}"/>`;
+const THERMO = (x,y) => `<rect x="${x}" y="${y}" width="9" height="34" rx="4.5" fill="#fff" stroke="#444" stroke-width="2"/><rect x="${x+2.5}" y="${y+8}" width="4" height="26" fill="#e33"/><circle cx="${x+4.5}" cy="${y+37}" r="7" fill="#e33" stroke="#444" stroke-width="2"/>`;
+const spikes = (cx,cy,r1,r2,n,col,knob) => { let s=''; for(let i=0;i<n;i++){ const a=i/n*Math.PI*2, c=Math.cos(a), d=Math.sin(a);
+  s += `<line x1="${(cx+c*r1).toFixed(1)}" y1="${(cy+d*r1).toFixed(1)}" x2="${(cx+c*r2).toFixed(1)}" y2="${(cy+d*r2).toFixed(1)}" stroke="${col}" stroke-width="3" stroke-linecap="round"/><circle cx="${(cx+c*(r2+2)).toFixed(1)}" cy="${(cy+d*(r2+2)).toFixed(1)}" r="3.6" fill="${knob}" stroke="${col}" stroke-width="1.5"/>`; } return s; };
+const XCHR = (x,y,s,c) => `<g stroke="${c}" stroke-width="${3*s}" stroke-linecap="round"><line x1="${x-4*s}" y1="${y-5*s}" x2="${x+4*s}" y2="${y+5*s}"/><line x1="${x+4*s}" y1="${y-5*s}" x2="${x-4*s}" y2="${y+5*s}"/></g>`;
+
+const MON = {
+ cell_m:{ ref:['E. coli bacterium (a prokaryote)','Bakteria E. coli (prokariot)'], svg:`
+  <g fill="none" stroke="#3d7a2f" stroke-width="2.5" stroke-linecap="round">
+   <path d="M24 60 q-6 -7 -11 0 t-11 0"/><path d="M27 47 q-5 -8 -11 -4 t-11 -6"/><path d="M27 73 q-5 8 -11 4 t-11 6"/>
+   <path d="M48 38 l-2 -8 M66 37 l1 -8 M84 40 l4 -7 M48 82 l-2 8 M66 83 l1 8 M84 80 l4 7"/></g>
+  <rect x="22" y="38" width="82" height="44" rx="22" fill="#86d86f" stroke="#3d7a2f" stroke-width="3"/>
+  <rect x="29" y="44" width="68" height="16" rx="8" fill="#b4ee9e" opacity=".7"/>
+  <circle cx="88" cy="68" r="5" fill="none" stroke="#3d7a2f" stroke-width="2"/>
+  <g fill="#3d7a2f"><circle cx="36" cy="70" r="1.8"/><circle cx="42" cy="75" r="1.8"/><circle cx="94" cy="54" r="1.8"/><circle cx="80" cy="76" r="1.8"/></g>
+  ${EY(52,72,57,7)}${FM(62,67,9)}`},
+ cell_b:{ ref:['Cell nucleus with nuclear pores and a nucleolus','Nukleus sel dengan liang nukleus dan nukleolus'], svg:`
+  <circle cx="60" cy="68" r="44" fill="#5b33a3"/>
+  <circle cx="60" cy="68" r="44" fill="none" stroke="#d7bcff" stroke-width="4" stroke-dasharray="5 6"/>
+  <circle cx="60" cy="68" r="37" fill="#8d5ee0"/>
+  <path d="M30 82 q6 -8 12 0 t12 0 M66 92 q5 -6 10 0 t10 0 M32 52 q4 6 8 0 t8 0 M84 50 q4 6 8 0" stroke="#e2d0ff" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+  <circle cx="82" cy="82" r="8" fill="#3a1d70"/><circle cx="80" cy="80" r="2.5" fill="#6e4bb0"/>
+  <path d="M36 32 L42 10 L51 24 L60 6 L69 24 L78 10 L84 32 Z" fill="#f2c14e" stroke="#9a6a10" stroke-width="2.5" stroke-linejoin="round"/>
+  <circle cx="60" cy="24" r="3.5" fill="#e45b5b"/><circle cx="46" cy="27" r="2.5" fill="#5aa8e8"/><circle cx="74" cy="27" r="2.5" fill="#5aa8e8"/>
+  ${EY(46,74,62,8.5)}${FM(60,78,11)}`},
+ membrane_m:{ ref:['Sodium chloride (salt) crystal, a common solute','Hablur natrium klorida (garam), zat terlarut biasa'], svg:`
+  <path d="M42 32 l-8 -18 l15 10 Z M78 32 l8 -18 l-15 10 Z" fill="#e45b5b" stroke="#7a1f1f" stroke-width="2" stroke-linejoin="round"/>
+  <path d="M60 22 L98 40 L60 58 L22 40 Z" fill="#f4f7ff" stroke="#6f80a6" stroke-width="2.5" stroke-linejoin="round"/>
+  <path d="M22 40 L60 58 L60 104 L22 86 Z" fill="#d3ddf2" stroke="#6f80a6" stroke-width="2.5" stroke-linejoin="round"/>
+  <path d="M60 58 L98 40 L98 86 L60 104 Z" fill="#b5c4e4" stroke="#6f80a6" stroke-width="2.5" stroke-linejoin="round"/>
+  <g font-family="sans-serif" font-weight="800" font-size="9" fill="#5b6a8f"><text x="28" y="94">Cl⁻</text><text x="80" y="94">Na⁺</text></g>
+  ${STAR(100,22,6)}${STAR(16,30,4)}
+  ${EY(45,75,70,6.5)}${FM(60,84,8)}`},
+ membrane_b:{ ref:['Plasmolysed onion epidermal cell','Sel epidermis bawang yang terplasmolisis'], svg:`
+  <rect x="14" y="14" width="92" height="92" rx="10" fill="#e3f5d3" stroke="#6b8e3a" stroke-width="7"/>
+  <path d="M38 40 Q60 28 82 40 Q92 62 82 84 Q60 94 38 84 Q28 62 38 40 Z" fill="#4fae4a" stroke="#2c6e2a" stroke-width="2.5"/>
+  <g fill="#2f8a33"><ellipse cx="44" cy="76" rx="4" ry="2.5"/><ellipse cx="78" cy="48" rx="4" ry="2.5"/><ellipse cx="76" cy="80" rx="4" ry="2.5"/></g>
+  ${DROP(26,24)}${DROP(92,26)}${DROP(94,90)}${DROP(24,88)}${DROP(58,20,'#5aa8e8',.8)}
+  ${EY(50,70,58,7)}${FR(60,74,9)}`},
+ enzyme_m:{ ref:['Substrate molecule that fits an enzyme\'s active site','Molekul substrat yang memadan tapak aktif enzim'], svg:`
+  <path d="M30 40 H52 a8 8 0 1 1 16 0 H90 V62 a8 8 0 1 1 0 16 V98 H30 V78 a8 8 0 1 0 0 -16 Z" fill="#f2c14e" stroke="#a87a12" stroke-width="3" stroke-linejoin="round"/>
+  ${STAR(18,26,6)}${STAR(104,30,5)}${STAR(102,104,4)}
+  ${EY(49,71,64,7,'none')}<path d="M44 52 l10 2 M76 52 l-10 2" stroke="#6b4a08" stroke-width="2.5" stroke-linecap="round"/>${SMILE(60,78,10,'#6b4a08')}`},
+ enzyme_b:{ ref:['Amylase enzyme denatured by high temperature','Enzim amilase yang ternyahasli oleh suhu tinggi'], svg:`
+  <path d="M36 36 q-8 -14 2 -26 q2 10 9 12 q-2 -12 9 -20 q2 12 10 15 q5 -7 3 -15 q13 10 6 32 Z" fill="#ff8a3d" stroke="#c4501a" stroke-width="2"/>
+  <path d="M46 34 q-2 -8 4 -12 q1 6 6 7 q2 -6 6 -8 q2 8 -2 13 Z" fill="#ffd166"/>
+  <path d="M22 72 Q20 38 54 34 L64 52 L76 34 Q100 40 98 72 Q96 104 60 106 Q24 104 22 72 Z" fill="#c2563a" stroke="#6e2412" stroke-width="3" stroke-linejoin="round"/>
+  <path d="M34 92 q6 -8 12 0 t12 0 t12 0 t12 0" stroke="#e8916f" stroke-width="3" fill="none" stroke-linecap="round"/>
+  <path d="M36 46 l7 8 l-5 6 l7 6 M88 50 l-7 6 l5 6 l-4 5" stroke="#2b0d05" stroke-width="2.5" fill="none" stroke-linejoin="round"/>
+  ${THERMO(102,14)}
+  ${EY(46,74,66,7.5)}${FM(60,80,10)}`},
+ mitosis_m:{ ref:['Centrosome pulling chromosomes with spindle fibres','Sentrosom menarik kromosom dengan gentian gelendong'], svg:`
+  <g stroke="#8fd3ff" stroke-width="2.5" fill="none" stroke-linecap="round">
+   <path d="M60 58 Q36 34 14 30"/><path d="M60 58 Q30 54 8 62"/><path d="M60 58 Q36 80 16 94"/><path d="M60 60 Q50 90 40 110"/>
+   <path d="M60 58 Q84 34 106 30"/><path d="M60 58 Q90 54 112 62"/><path d="M60 58 Q84 80 104 94"/><path d="M60 60 Q70 90 80 110"/></g>
+  ${XCHR(14,30,1,'#e36aa0')}${XCHR(8,62,1,'#e36aa0')}${XCHR(16,94,1,'#e36aa0')}${XCHR(40,110,1,'#e36aa0')}
+  ${XCHR(106,30,1,'#e36aa0')}${XCHR(112,62,1,'#e36aa0')}${XCHR(104,94,1,'#e36aa0')}${XCHR(80,110,1,'#e36aa0')}
+  <rect x="46" y="28" width="9" height="16" rx="2" fill="#ffd166" stroke="#8a5a10" stroke-width="2" transform="rotate(-25 50 36)"/>
+  <rect x="65" y="28" width="9" height="16" rx="2" fill="#ffd166" stroke="#8a5a10" stroke-width="2" transform="rotate(25 70 36)"/>
+  <circle cx="60" cy="60" r="22" fill="#f08a4b" stroke="#8a3d12" stroke-width="3"/>
+  ${EY(51,69,57,6.5)}${FM(60,68,7)}`},
+ mitosis_b:{ ref:['A tumour: a mass of cells dividing out of control','Tumor: jisim sel yang membahagi tanpa kawalan'], svg:`
+  <g stroke="#8e2650" stroke-width="10" fill="none" stroke-linecap="round">
+   <path d="M38 78 q-12 20 -28 16"/><path d="M50 86 q-4 22 -16 26"/><path d="M70 86 q4 22 16 26"/><path d="M82 78 q12 20 28 16"/></g>
+  <g fill="#f3a9c4"><circle cx="18" cy="95" r="2"/><circle cx="38" cy="108" r="2"/><circle cx="82" cy="108" r="2"/><circle cx="102" cy="95" r="2"/></g>
+  <g fill="#b23d6a" stroke="#6e1838" stroke-width="2.5">
+   <circle cx="44" cy="30" r="15"/><circle cx="78" cy="30" r="15"/><circle cx="32" cy="64" r="17"/><circle cx="88" cy="64" r="17"/></g>
+  <g fill="#5a0f2c"><circle cx="40" cy="26" r="4"/><circle cx="82" cy="27" r="4"/><circle cx="26" cy="66" r="4"/><circle cx="94" cy="62" r="4"/></g>
+  <circle cx="60" cy="56" r="30" fill="#c94c7c" stroke="#6e1838" stroke-width="3"/>
+  ${EY(49,71,52,8.5)}${FM(60,68,11)}`},
+ lungs_m:{ ref:['Car exhaust fumes containing carbon monoxide','Asap ekzos kereta yang mengandungi karbon monoksida'], svg:`
+  <rect x="4" y="90" width="36" height="14" rx="3" fill="#7a7f88" stroke="#3d4148" stroke-width="2.5"/><ellipse cx="40" cy="97" rx="4" ry="7" fill="#2a2d33"/>
+  <g fill="#8d939d" stroke="#5a5f68" stroke-width="2"><circle cx="52" cy="88" r="9"/><circle cx="62" cy="74" r="13"/><circle cx="56" cy="52" r="16"/><circle cx="80" cy="50" r="20"/><circle cx="94" cy="68" r="14"/><circle cx="74" cy="30" r="14"/></g>
+  <g fill="#a9aeb7"><circle cx="56" cy="52" r="13"/><circle cx="80" cy="50" r="17"/><circle cx="74" cy="31" r="11"/></g>
+  <text x="84" y="80" font-family="sans-serif" font-weight="800" font-size="11" fill="#5a5f68">CO</text>
+  ${EY(64,86,48,6.5,'angry','#d22')}${FM(75,60,8)}`},
+ lungs_b:{ ref:['Fatigued skeletal muscle full of lactic acid','Otot rangka yang lesu dipenuhi asid laktik'], svg:`
+  <path d="M12 106 C30 70 70 112 74 76 C78 54 58 48 70 32" stroke="#6e1218" stroke-width="27" fill="none" stroke-linecap="round"/>
+  <path d="M12 106 C30 70 70 112 74 76 C78 54 58 48 70 32" stroke="#b8323a" stroke-width="22" fill="none" stroke-linecap="round"/>
+  <path d="M12 106 C30 70 70 112 74 76 C78 54 58 48 70 32" stroke="#f0a0a0" stroke-width="22" fill="none" stroke-dasharray="2 6" opacity=".5"/>
+  <path d="M90 24 L116 30 L96 44 Z" fill="#c63c44" stroke="#6e1218" stroke-width="3" stroke-linejoin="round"/>
+  <path d="M100 38 l2 5 l2 -5 M107 34 l2 5 l2 -5" fill="#fff"/>
+  <path d="M66 18 l-9 -13 l15 7 Z M82 14 l1 -13 l8 12 Z" fill="#f2e1c2" stroke="#8a6a3a" stroke-width="1.5"/>
+  <ellipse cx="78" cy="30" rx="21" ry="17" fill="#c63c44" stroke="#6e1218" stroke-width="3"/>
+  ${DROP(98,50,'#e8d84a')}${DROP(104,62,'#e8d84a',.8)}${DROP(36,96,'#e8d84a')}${DROP(54,104,'#e8d84a',.8)}
+  ${EY(71,86,28,6)}`},
+ blood_m:{ ref:['Influenza virus with surface spike proteins','Virus influenza dengan protein pancang permukaan'], svg:`
+  ${spikes(60,60,30,42,14,'#226b39','#e36a5a')}
+  <circle cx="60" cy="60" r="32" fill="#5fc27a" stroke="#226b39" stroke-width="3"/>
+  <g fill="#4aa866"><circle cx="40" cy="44" r="4"/><circle cx="80" cy="78" r="5"/><circle cx="76" cy="40" r="3"/><circle cx="42" cy="78" r="3"/></g>
+  ${EY(48,72,56,7.5)}${FM(60,70,10)}`},
+ blood_b:{ ref:['Bacteriophage, a virus that infects bacteria','Bakteriofaj, virus yang menjangkiti bakteria'], svg:`
+  <path d="M50 94 L30 114 M54 95 L44 116 M66 95 L76 116 M70 94 L90 114 M46 92 L20 102 M74 92 L100 102" stroke="#8b93a5" stroke-width="3.5" stroke-linecap="round"/>
+  <rect x="42" y="87" width="36" height="8" rx="2" fill="#5d6577" stroke="#2f3442" stroke-width="2"/>
+  <rect x="52" y="60" width="16" height="28" fill="#aab2c4" stroke="#4a5163" stroke-width="2.5"/>
+  <path d="M52 66 H68 M52 72 H68 M52 78 H68 M52 84 H68" stroke="#4a5163" stroke-width="2"/>
+  <rect x="45" y="55" width="30" height="7" rx="2" fill="#5d6577" stroke="#2f3442" stroke-width="2"/>
+  <polygon points="60,4 94,20 94,44 60,58 26,44 26,20" fill="#7b5cc4" stroke="#3a2470" stroke-width="3" stroke-linejoin="round"/>
+  <path d="M26 20 L60 30 L94 20 M60 4 L60 30" stroke="#a58be6" stroke-width="2" fill="none"/>
+  ${EY(47,73,36,7,'angry','#d22')}<path d="M52 49 l4 -3 l4 3 l4 -3 l4 3" stroke="#111" stroke-width="2.5" fill="none" stroke-linejoin="round"/>`},
+ nerve_m:{ ref:['Neurone with dendrites and a myelinated axon','Neuron dengan dendrit dan akson bermielin'], svg:`
+  <path d="M46 56 L14 26 L20 46 L4 44 L16 58 L6 70 L28 66 L34 74 Z" fill="#5a4aa8" stroke="#2b1f66" stroke-width="2.5" stroke-linejoin="round"/>
+  <path d="M74 56 L106 26 L100 46 L116 44 L104 58 L114 70 L92 66 L86 74 Z" fill="#5a4aa8" stroke="#2b1f66" stroke-width="2.5" stroke-linejoin="round"/>
+  <path d="M30 50 L18 40 M28 62 L12 62 M90 50 L102 40 M92 62 L108 62" stroke="#9d8ff0" stroke-width="2" stroke-linecap="round"/>
+  <path d="M60 76 C60 92 74 96 68 116" stroke="#d7c8ff" stroke-width="3" fill="none"/>
+  <path d="M60 76 C60 92 74 96 68 116" stroke="#f2c14e" stroke-width="9" fill="none" stroke-dasharray="7 5" stroke-linecap="round"/>
+  <path d="M48 42 l-4 -12 l10 6 Z M72 42 l4 -12 l-10 6 Z" fill="#7b68d6" stroke="#2b1f66" stroke-width="2"/>
+  <circle cx="60" cy="58" r="20" fill="#7b68d6" stroke="#2b1f66" stroke-width="3"/>
+  <path d="M96 84 l6 -8 l-2 7 l6 -2 l-8 10 l2 -7 Z" fill="#ffe066"/><path d="M18 84 l6 -8 l-2 7 l6 -2 l-8 10 l2 -7 Z" fill="#ffe066"/>
+  ${EY(52,68,55,6)}${FM(60,66,7)}`},
+ nerve_b:{ ref:['Human brain with the hypothalamus highlighted','Otak manusia dengan hipotalamus diserlahkan'], svg:`
+  <path d="M20 62 C12 40 28 18 50 22 C56 12 76 12 82 22 C104 20 112 46 102 62 C108 82 90 98 72 92 C64 102 46 102 42 92 C22 96 12 80 20 62 Z" fill="#f2a4b8" stroke="#9c4060" stroke-width="3"/>
+  <path d="M32 44 q8 -7 15 2 q6 -9 14 0 M67 38 q8 -6 17 2 q5 -3 10 2 M28 76 q8 6 14 -2 M80 78 q8 4 14 -4 M61 24 v12" stroke="#c46682" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+  <ellipse cx="60" cy="88" rx="13" ry="9" fill="#ff4d4d" opacity=".35"/>
+  <ellipse cx="60" cy="88" rx="8" ry="5.5" fill="#ff4d4d" stroke="#8a1010" stroke-width="2"/>
+  ${THERMO(104,6)}
+  ${EY(46,74,58,8)}${FR(60,72,10)}`},
+ photo_m:{ ref:['A wilting leaf losing turgor in the heat','Daun layu yang kehilangan kesegahan dalam cuaca panas'], svg:`
+  <circle cx="22" cy="22" r="12" fill="#ffcf4d"/>
+  <path d="M22 4 v-3 M22 40 v3 M4 22 h-3 M40 22 h3 M9 9 l-2 -2 M35 35 l2 2 M35 9 l2 -2 M9 35 l-2 2" stroke="#ffcf4d" stroke-width="2.5" stroke-linecap="round"/>
+  <path d="M30 114 C30 74 48 42 70 36" stroke="#6b5a2a" stroke-width="4.5" fill="none" stroke-linecap="round"/>
+  <path d="M70 36 C98 36 110 72 96 108 C74 92 60 64 70 36 Z" fill="#a3c24e" stroke="#5b6e1e" stroke-width="3" stroke-linejoin="round"/>
+  <path d="M96 108 C92 98 96 90 102 84 C104 94 101 102 96 108 Z" fill="#a8743a"/>
+  <path d="M72 40 C86 56 92 80 95 104 M80 58 l8 -4 M84 74 l8 -2" stroke="#5b6e1e" stroke-width="2" fill="none" stroke-linecap="round"/>
+  ${DROP(60,52,'#8fd3ff',.9)}
+  ${EY(76,92,66,5.5,'sad')}${FR(85,80,6)}`},
+ photo_b:{ ref:['Rainforest tree, with xylem and phloem in its trunk','Pokok hutan hujan, dengan xilem dan floem dalam batangnya'], svg:`
+  <path d="M46 72 L22 60 L14 48 M74 72 L98 62 L106 50" stroke="#4a3426" stroke-width="7" stroke-linecap="round" fill="none"/>
+  <g fill="#244a30" stroke="#13281a" stroke-width="2.5"><circle cx="36" cy="38" r="22"/><circle cx="84" cy="38" r="22"/><circle cx="60" cy="26" r="24"/><circle cx="60" cy="50" r="22"/></g>
+  <g fill="#3a6e47"><circle cx="54" cy="20" r="6"/><circle cx="30" cy="34" r="5"/><circle cx="86" cy="32" r="5"/></g>
+  <path d="M46 60 H74 L78 98 L96 114 H78 L70 104 L62 114 H58 L50 104 L42 114 H24 L42 98 Z" fill="#4a3426" stroke="#22160e" stroke-width="3" stroke-linejoin="round"/>
+  <path d="M55 64 V102 M65 64 V102" stroke="#5aa8e8" stroke-width="2.2"/><path d="M60 64 V104" stroke="#f2a03d" stroke-width="2.2"/>
+  ${EY(52,68,76,5.5,'angry','#b8860b')}<ellipse cx="60" cy="90" rx="7" ry="5" fill="#120a05"/>`},
+ eco_m:{ ref:['Red palm weevil, an invasive pest of Malaysian palms','Kumbang merah palma, perosak invasif pokok palma di Malaysia'], svg:`
+  <g stroke="#2a0e05" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round">
+   <path d="M42 54 L24 46 L14 52 M40 70 L20 72 L12 82 M44 86 L28 98 L26 110 M82 54 L100 46 L110 52 M84 70 L104 72 L112 82 M80 86 L96 98 L98 110"/>
+   <path d="M54 26 L44 6 M70 26 L80 6" stroke-width="2.5"/><path d="M44 6 l-6 4 M80 6 l6 4" stroke-width="2.5"/></g>
+  <path d="M62 30 L60 12" stroke="#4a1608" stroke-width="5" stroke-linecap="round"/>
+  <ellipse cx="62" cy="76" rx="25" ry="32" fill="#b5401f" stroke="#4a1608" stroke-width="3"/>
+  <path d="M62 50 V106" stroke="#4a1608" stroke-width="2.5"/><path d="M48 66 q4 -6 8 0 M68 80 q4 -6 8 0" stroke="#d9714a" stroke-width="2" fill="none"/>
+  <ellipse cx="62" cy="42" rx="18" ry="14" fill="#c95a2c" stroke="#4a1608" stroke-width="3"/>
+  <g fill="#2a0e05"><circle cx="50" cy="48" r="2.5"/><circle cx="74" cy="48" r="2.5"/></g>
+  ${EY(55,69,40,5.5)}`},
+ eco_b:{ ref:['Factory smoke and haze (jerebu) from burning','Asap kilang dan jerebu daripada pembakaran'], svg:`
+  <rect x="78" y="62" width="12" height="52" fill="#6d6f77" stroke="#2a2b30" stroke-width="3"/><rect x="96" y="72" width="12" height="42" fill="#6d6f77" stroke="#2a2b30" stroke-width="3"/>
+  <path d="M8 114 V82 L28 92 V82 L48 92 V82 L70 92 V114 Z" fill="#5d5f66" stroke="#2a2b30" stroke-width="3" stroke-linejoin="round"/>
+  <g fill="#ffd166"><rect x="16" y="98" width="7" height="7"/><rect x="34" y="98" width="7" height="7"/><rect x="52" y="98" width="7" height="7"/></g>
+  <g fill="#4d443d" stroke="#2a221d" stroke-width="2.5"><circle cx="38" cy="40" r="24"/><circle cx="66" cy="30" r="26"/><circle cx="94" cy="42" r="22"/><circle cx="52" cy="58" r="20"/><circle cx="84" cy="58" r="20"/></g>
+  <g fill="#62574f"><circle cx="66" cy="30" r="21"/><circle cx="38" cy="40" r="19"/><circle cx="94" cy="42" r="17"/></g>
+  ${EY(52,80,40,8,'angry','#e33')}${FM(66,56,12)}`},
+ genetic_m:{ ref:['DNA double helix with a point mutation','Heliks ganda dua DNA dengan mutasi titik'], svg:`
+  <g stroke-width="3" stroke-linecap="round"><path d="M50 50 H70" stroke="#ffd166"/><path d="M47 58 H73" stroke="#8fd3ff"/><path d="M50 94 H70" stroke="#ffd166"/><path d="M47 102 H73" stroke="#8fd3ff"/>
+   <path d="M44 86 H76" stroke="#ff3b3b" stroke-width="4"/></g>
+  <path d="M86 78 l-6 -4 l2 6 l-6 -1" stroke="#ff3b3b" stroke-width="2" fill="none"/>
+  <path d="M42 42 C80 54 80 66 60 76 C40 86 40 100 78 112" stroke="#5aa8e8" stroke-width="6" fill="none" stroke-linecap="round"/>
+  <path d="M78 42 C40 54 40 66 60 76 C80 86 80 100 42 112" stroke="#e36aa0" stroke-width="6" fill="none" stroke-linecap="round"/>
+  <circle cx="60" cy="26" r="19" fill="#9fdcff" stroke="#2f6a99" stroke-width="3"/>
+  ${EY(52,68,24,5.5)}${FM(60,32,6)}`},
+ genetic_b:{ ref:['X chromosome, carrier of sex-linked recessive genes','Kromosom X, pembawa gen resesif rangkai seks'], svg:`
+  <path d="M42 54 L6 28 L14 52 L2 60 L20 66 L12 80 L42 74 Z" fill="#3e8f7a" stroke="#1d4d40" stroke-width="2.5" stroke-linejoin="round"/>
+  <path d="M78 54 L114 28 L106 52 L118 60 L100 66 L108 80 L78 74 Z" fill="#3e8f7a" stroke="#1d4d40" stroke-width="2.5" stroke-linejoin="round"/>
+  <g transform="rotate(24 60 78)"><rect x="51" y="40" width="18" height="74" rx="9" fill="#4fbf9f" stroke="#1d4d40" stroke-width="3"/><path d="M51 52 H69 M51 62 H69 M51 94 H69 M51 104 H69" stroke="#1d6b56" stroke-width="3"/></g>
+  <g transform="rotate(-24 60 78)"><rect x="51" y="40" width="18" height="74" rx="9" fill="#4fbf9f" stroke="#1d4d40" stroke-width="3"/><path d="M51 54 H69 M51 98 H69 M51 106 H69" stroke="#1d6b56" stroke-width="3"/></g>
+  <circle cx="60" cy="78" r="6" fill="#1d6b56"/>
+  <path d="M48 20 l-6 -14 l12 8 Z M72 20 l6 -14 l-12 8 Z" fill="#f2e1c2" stroke="#8a6a3a" stroke-width="1.5"/>
+  <ellipse cx="60" cy="30" rx="19" ry="15" fill="#4fbf9f" stroke="#1d4d40" stroke-width="3"/>
+  ${EY(52,68,28,5.5)}${FM(60,37,6)}`}
+};
+const monSvg = (k, size=110) => `<svg viewBox="0 0 120 120" width="${size}" height="${size}" aria-hidden="true">${MON[k].svg}</svg>`;
+
+const HEX = (cx,cy,r,f,s,w=3) => { let p=[]; for(let i=0;i<6;i++){const a=Math.PI/180*(60*i-90); p.push((cx+r*Math.cos(a)).toFixed(1)+','+(cy+r*Math.sin(a)).toFixed(1));} return `<polygon points="${p.join(' ')}" fill="${f}" stroke="${s}" stroke-width="${w}" stroke-linejoin="round"/>`; };
+const CILIA = (cx,cy,rx,ry,n,col) => { let s=''; for(let i=0;i<n;i++){const a=i/n*Math.PI*2,c=Math.cos(a),d=Math.sin(a); s+=`<line x1="${(cx+rx*c).toFixed(1)}" y1="${(cy+ry*d).toFixed(1)}" x2="${(cx+(rx+6)*c).toFixed(1)}" y2="${(cy+(ry+6)*d).toFixed(1)}" stroke="${col}" stroke-width="2" stroke-linecap="round"/>`;} return s; };
+Object.assign(MON, {
+ cell_m2:{ ref:['Paramecium, a unicellular protist covered in cilia','Paramecium, protista unisel yang diliputi silia'], svg:`
+  ${CILIA(61,60,40,27,34,'#a0457a')}
+  <ellipse cx="61" cy="60" rx="40" ry="27" fill="#f2b8d8" stroke="#a0457a" stroke-width="3"/>
+  <ellipse cx="80" cy="50" rx="10" ry="6" fill="#d77fb2"/>
+  ${STAR(32,58,6,'#8fd3ff')}${STAR(92,66,6,'#8fd3ff')}
+  <path d="M60 72 Q70 82 84 74" stroke="#a0457a" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+  ${EY(48,66,56,6)}${FM(57,67,6)}`},
+ cell_m3:{ ref:['Amoeba, moving with pseudopodia','Amoeba, bergerak menggunakan pseudopodium'], svg:`
+  <path d="M30 58 C18 40 36 28 46 38 C50 18 72 16 74 34 C88 24 106 36 94 52 C112 60 106 84 88 78 C88 98 64 102 60 86 C48 102 26 96 34 78 C14 78 12 60 30 58 Z" fill="#9fd9c9" stroke="#2f7a6a" stroke-width="3" stroke-linejoin="round"/>
+  <circle cx="80" cy="70" r="7" fill="#3f9a86"/><circle cx="42" cy="76" r="6" fill="none" stroke="#2f7a6a" stroke-width="2"/><circle cx="42" cy="76" r="2" fill="#2f7a6a"/>
+  ${EY(54,72,50,6.5)}${FM(63,62,8)}`},
+ membrane_m2:{ ref:['Water molecule (H₂O), the particle that moves in osmosis','Molekul air (H₂O), zarah yang bergerak dalam osmosis'], svg:`
+  <path d="M42 54 L32 40 M78 54 L88 40" stroke="#6f80a6" stroke-width="6" stroke-linecap="round"/>
+  <circle cx="30" cy="36" r="17" fill="#f4f7ff" stroke="#6f80a6" stroke-width="3"/><circle cx="90" cy="36" r="17" fill="#f4f7ff" stroke="#6f80a6" stroke-width="3"/>
+  <g font-family="sans-serif" font-weight="800" font-size="14" fill="#6f80a6" text-anchor="middle"><text x="30" y="41">H</text><text x="90" y="41">H</text></g>
+  <circle cx="60" cy="72" r="32" fill="#e45b5b" stroke="#7a1f1f" stroke-width="3"/>
+  <ellipse cx="48" cy="58" rx="9" ry="5" fill="#f08a8a"/>
+  ${EY(48,72,68,7)}${FM(60,84,9)}`},
+ membrane_m3:{ ref:['Glucose molecule (C₆H₁₂O₆), carried by facilitated diffusion','Molekul glukosa (C₆H₁₂O₆), diangkut secara resapan berbantu'], svg:`
+  <path d="M33 74 L12 88 M87 74 L108 88 M48 90 L44 112 M72 90 L76 112" stroke="#b8860b" stroke-width="5" stroke-linecap="round"/>
+  <g font-family="sans-serif" font-weight="800" font-size="10" fill="#b8860b"><text x="0" y="100">OH</text><text x="100" y="100">OH</text></g>
+  ${HEX(60,58,33,'#ffe7a3','#b8860b',4)}
+  <circle cx="88.6" cy="41.5" r="8" fill="#e45b5b" stroke="#7a1f1f" stroke-width="2"/><text x="88.6" y="45.5" text-anchor="middle" font-family="sans-serif" font-weight="800" font-size="10" fill="#fff">O</text>
+  ${EY(49,71,56,6.5)}${FM(60,69,8)}`},
+ enzyme_m2:{ ref:['Starch chain, turned blue-black by the iodine test','Rantai kanji, bertukar biru tua dalam ujian iodin'], svg:`
+  <path d="M14 100 L30 88 L46 94 L62 84 L74 70 L80 56" stroke="#1d2660" stroke-width="5" fill="none" stroke-linejoin="round"/>
+  ${HEX(14,100,9,'#34418f','#1d2660',2.5)}${HEX(30,88,9,'#34418f','#1d2660',2.5)}${HEX(46,94,9,'#34418f','#1d2660',2.5)}${HEX(62,84,10,'#34418f','#1d2660',2.5)}${HEX(74,70,10,'#34418f','#1d2660',2.5)}
+  <path d="M104 40 l12 -2 m-12 2 l12 5" stroke="#e45b5b" stroke-width="2.5" stroke-linecap="round"/>
+  ${HEX(84,40,22,'#4656a8','#1d2660',3)}
+  ${EY(77,92,36,5.5,'angry')}${FM(85,47,6)}`},
+ enzyme_m3:{ ref:['Triglyceride (lipid): glycerol with three fatty acid tails','Trigliserida (lipid): gliserol dengan tiga ekor asid lemak'], svg:`
+  <g stroke="#d09520" stroke-width="6" fill="none" stroke-linecap="round" stroke-linejoin="round">
+   <path d="M42 62 l-4 10 l6 8 l-6 8 l6 8 l-6 8 l4 6"/><path d="M60 64 l-5 10 l7 8 l-7 8 l7 8 l-7 8 l5 6"/><path d="M78 62 l-4 10 l6 8 l-6 8 l6 8 l-6 8 l4 6"/></g>
+  <path d="M22 64 C22 26 98 26 98 64 Q60 72 22 64 Z" fill="#ffd76a" stroke="#a8781a" stroke-width="3"/>
+  <ellipse cx="44" cy="40" rx="10" ry="5" fill="#fff" opacity=".55"/>
+  ${DROP(10,34,'#ffd76a')}${DROP(108,30,'#ffd76a',.8)}
+  ${EY(48,72,48,6.5)}${FM(60,56,7)}`},
+ mitosis_m2:{ ref:['Chromosome made of two sister chromatids','Kromosom yang terdiri daripada dua kromatid kembar'], svg:`
+  <g transform="rotate(28 60 60)"><rect x="50" y="10" width="20" height="100" rx="10" fill="#e36aa0" stroke="#8a2457" stroke-width="3"/><path d="M50 26 H70 M50 38 H70 M50 84 H70 M50 96 H70" stroke="#a83a72" stroke-width="3"/></g>
+  <g transform="rotate(-28 60 60)"><rect x="50" y="10" width="20" height="100" rx="10" fill="#e36aa0" stroke="#8a2457" stroke-width="3"/><path d="M50 22 H70 M50 34 H70 M50 88 H70" stroke="#a83a72" stroke-width="3"/></g>
+  <circle cx="60" cy="60" r="17" fill="#f7a6c9" stroke="#8a2457" stroke-width="3"/>
+  ${EY(53,67,57,5)}${FM(60,65,5)}`},
+ mitosis_m3:{ ref:['Animal cell splitting by cytokinesis (cleavage furrow)','Sel haiwan membelah melalui sitokinesis (alur pembelahan)'], svg:`
+  <path d="M60 38 C48 20 12 24 12 60 C12 96 48 100 60 82 C72 100 108 96 108 60 C108 24 72 20 60 38 Z" fill="#9ec8ff" stroke="#2f5f9a" stroke-width="3" stroke-linejoin="round"/>
+  <path d="M54 24 L60 34 L66 24 Z M54 96 L60 86 L66 96 Z" fill="#2f5f9a"/>
+  ${EY(28,46,54,5.5)}${FM(37,66,6)}${EY(74,92,54,5.5)}${FM(83,66,6)}`},
+ lungs_m2:{ ref:['Cigarette smoke, full of tar that damages the alveoli','Asap rokok, penuh dengan tar yang merosakkan alveolus'], svg:`
+  <path d="M18 54 C8 44 22 36 14 26 C8 18 18 10 14 4 M30 50 C24 42 34 36 28 26" stroke="#9aa0aa" stroke-width="4" fill="none" stroke-linecap="round"/>
+  <g transform="rotate(-25 60 70)">
+   <rect x="14" y="58" width="80" height="22" rx="3" fill="#f5f5f0" stroke="#6e6e6e" stroke-width="2.5"/>
+   <rect x="94" y="58" width="20" height="22" rx="3" fill="#e0974a" stroke="#6e6e6e" stroke-width="2.5"/>
+   <rect x="6" y="58" width="10" height="22" rx="2" fill="#555"/><circle cx="8" cy="69" r="7" fill="#ff5a1f" opacity=".75"/>
+   ${EY(44,64,66,5.5)}${FM(54,73,6)}</g>
+  ${DROP(70,96,'#5a3a1a')}${DROP(84,102,'#5a3a1a',.8)}`},
+ lungs_m3:{ ref:['Budding yeast, which ferments sugar into ethanol and CO₂','Yis bertunas, yang memfermentasi gula kepada etanol dan CO₂'], svg:`
+  <g fill="none" stroke="#5aa8e8" stroke-width="2"><circle cx="102" cy="84" r="5"/><circle cx="108" cy="70" r="3.5"/><circle cx="16" cy="30" r="4"/><circle cx="24" cy="18" r="2.5"/></g>
+  <text x="84" y="106" font-family="sans-serif" font-weight="800" font-size="10" fill="#5aa8e8">CO₂</text>
+  <ellipse cx="90" cy="36" rx="15" ry="12" fill="#f3e2b3" stroke="#9a7a3a" stroke-width="3"/>
+  <ellipse cx="54" cy="66" rx="36" ry="30" fill="#f3e2b3" stroke="#9a7a3a" stroke-width="3"/>
+  <ellipse cx="68" cy="80" rx="9" ry="6" fill="#e5cf92"/>
+  ${EY(85,95,35,3.4,'none')}
+  ${EY(42,62,60,6.5)}${FM(52,73,8)}`},
+ blood_m2:{ ref:['Aedes mosquito, the carrier of dengue in Malaysia','Nyamuk Aedes, pembawa denggi di Malaysia'], svg:`
+  <ellipse cx="38" cy="50" rx="24" ry="10" fill="#cfe6ff" opacity=".65" stroke="#7aa0c8" stroke-width="2" transform="rotate(-25 38 50)"/>
+  <ellipse cx="82" cy="50" rx="24" ry="10" fill="#cfe6ff" opacity=".65" stroke="#7aa0c8" stroke-width="2" transform="rotate(25 82 50)"/>
+  <g stroke-linecap="round" fill="none"><g stroke="#222" stroke-width="3"><path d="M52 62 L26 74 L14 96 M54 66 L36 92 L32 114 M52 58 L24 52 L6 60 M68 62 L94 74 L106 96 M66 66 L84 92 L88 114 M68 58 L96 52 L114 60"/></g>
+   <g stroke="#fff" stroke-width="3" stroke-dasharray="3 6"><path d="M26 74 L14 96 M36 92 L32 114 M94 74 L106 96 M84 92 L88 114"/></g></g>
+  <ellipse cx="60" cy="88" rx="11" ry="22" fill="#222"/><path d="M50 82 H70 M50 92 H70 M52 102 H68" stroke="#fff" stroke-width="2.5"/>
+  <circle cx="60" cy="60" r="12" fill="#333"/><path d="M55 54 q5 8 0 12 M65 54 q-5 8 0 12" stroke="#fff" stroke-width="1.8" fill="none"/>
+  <path d="M60 30 L60 4" stroke="#222" stroke-width="3" stroke-linecap="round"/>
+  <circle cx="60" cy="38" r="12" fill="#333"/>
+  ${EY(55,65,38,4.5,'angry','#d22')}`},
+ blood_m3:{ ref:['Clostridium tetani, the tetanus bacterium found on rusty nails','Clostridium tetani, bakteria tetanus pada paku berkarat'], svg:`
+  <path d="M14 112 L58 86" stroke="#a0522d" stroke-width="6" stroke-linecap="round"/><path d="M52 78 L64 96" stroke="#8a4520" stroke-width="7" stroke-linecap="round"/>
+  <g fill="#c06a3a"><circle cx="26" cy="104" r="2.5"/><circle cx="40" cy="96" r="2"/></g>
+  <rect x="14" y="40" width="70" height="24" rx="12" fill="#b48ae0" stroke="#5b2f99" stroke-width="3"/>
+  <circle cx="92" cy="52" r="17" fill="#e8dcff" stroke="#5b2f99" stroke-width="3"/><circle cx="92" cy="52" r="9" fill="none" stroke="#9a78d0" stroke-width="2"/>
+  ${EY(38,56,49,6)}${FM(47,57,6)}`},
+ nerve_m2:{ ref:['Kidney, which regulates water and salts in the blood','Ginjal, yang mengawal air dan garam dalam darah'], svg:`
+  <path d="M74 64 L112 54" stroke="#d63a3a" stroke-width="6" stroke-linecap="round"/><path d="M74 70 L112 72" stroke="#3a6ad6" stroke-width="6" stroke-linecap="round"/>
+  <path d="M76 76 C82 90 86 100 88 116" stroke="#e8c84a" stroke-width="6" fill="none" stroke-linecap="round"/>
+  <path d="M58 12 C26 12 10 42 14 70 C18 98 44 112 66 104 C82 98 86 86 76 78 C68 72 66 62 72 54 C84 44 90 30 80 20 C74 14 66 12 58 12 Z" fill="#a33a45" stroke="#5a1219" stroke-width="3" stroke-linejoin="round"/>
+  <path d="M30 40 C26 56 28 80 44 92" stroke="#c96870" stroke-width="3" fill="none" stroke-linecap="round"/>
+  ${EY(36,56,50,6.5)}${FM(46,64,8)}`},
+ nerve_m3:{ ref:['Sweat droplet from a sweat pore, which cools the skin','Titisan peluh dari liang peluh, yang menyejukkan kulit'], svg:`
+  <rect x="0" y="94" width="120" height="26" fill="#e8b58f"/><path d="M0 94 H120" stroke="#b5835c" stroke-width="3"/><path d="M56 94 q4 8 8 0" fill="#b5835c"/>
+  <path d="M14 40 q6 -6 0 -12 q-6 -6 0 -12 M106 40 q6 -6 0 -12 q-6 -6 0 -12" stroke="#ff8a3d" stroke-width="3" fill="none" stroke-linecap="round"/>
+  <path d="M60 10 C72 32 90 50 90 68 A30 30 0 0 1 30 68 C30 50 48 32 60 10 Z" fill="#8fd3ff" stroke="#2f6a99" stroke-width="3" stroke-linejoin="round"/>
+  <ellipse cx="46" cy="56" rx="5" ry="9" fill="#fff" opacity=".6"/>
+  ${EY(50,70,64,6)}${FM(60,76,8)}`},
+ photo_m2:{ ref:['Aphid, an insect that sucks sap from the phloem','Afid, serangga yang menghisap sap daripada floem'], svg:`
+  <path d="M0 110 L120 94" stroke="#6b8e3a" stroke-width="11" stroke-linecap="round"/>
+  <g stroke="#3d6b1a" stroke-width="2.5" fill="none" stroke-linecap="round"><path d="M38 52 L18 44 L10 52 M36 66 L14 70 L8 80 M40 80 L24 94 M82 52 L102 44 L110 52 M84 66 L106 70 L112 80 M80 80 L96 94"/>
+   <path d="M50 34 C40 14 24 10 14 14 M70 34 C80 14 96 10 106 14"/></g>
+  <path d="M52 88 L50 98 M68 88 L70 98" stroke="#3d6b1a" stroke-width="4" stroke-linecap="round"/>
+  <ellipse cx="60" cy="60" rx="25" ry="30" fill="#8fd35a" stroke="#3d6b1a" stroke-width="3"/>
+  <path d="M60 90 L60 102" stroke="#3d6b1a" stroke-width="2.5"/>${DROP(76,100,'#ffe9a0',.8)}
+  ${EY(50,70,54,6.5)}${FM(60,66,7)}`},
+ photo_m3:{ ref:['Stoma, the leaf pore opened and closed by guard cells','Stoma, liang daun yang dibuka dan ditutup oleh sel pengawal'], svg:`
+  <rect x="8" y="12" width="104" height="96" rx="20" fill="#7cc95a" stroke="#3d6b1a" stroke-width="3"/>
+  <path d="M8 40 H30 L36 22 M112 44 H90 L84 24 M8 84 H26 L34 108 M112 82 H94 L88 108" stroke="#a6e088" stroke-width="2" fill="none"/>
+  <path d="M60 44 C34 44 28 94 60 98 C46 86 46 56 60 44 Z" fill="#3f9a3f" stroke="#1f5a1f" stroke-width="2.5"/>
+  <path d="M60 44 C86 44 92 94 60 98 C74 86 74 56 60 44 Z" fill="#3f9a3f" stroke="#1f5a1f" stroke-width="2.5"/>
+  <g fill="#2a7a2a"><circle cx="42" cy="64" r="2.5"/><circle cx="44" cy="80" r="2.5"/><circle cx="78" cy="64" r="2.5"/><circle cx="76" cy="80" r="2.5"/></g>
+  <path d="M60 50 C52 60 52 84 60 92 C68 84 68 60 60 50 Z" fill="#2a0d10"/>
+  <path d="M55 58 l3 4 l-3 3 Z M65 58 l-3 4 l3 3 Z M55 76 l3 4 l-3 3 Z M65 76 l-3 4 l3 3 Z" fill="#fff"/>
+  ${EY(44,76,30,7)}`},
+ eco_m2:{ ref:['Plastic bag, a pollutant that harms marine life','Beg plastik, bahan pencemar yang membahayakan hidupan laut'], svg:`
+  <path d="M0 108 q15 -8 30 0 t30 0 t30 0 t30 0 V120 H0 Z" fill="#3a7bb8" opacity=".7"/>
+  <path d="M38 34 C38 10 54 10 54 30 M66 30 C66 10 82 10 82 34" stroke="#c4ccd8" stroke-width="5" fill="none" stroke-linecap="round"/>
+  <path d="M26 30 H94 L100 96 Q92 88 84 98 Q76 88 68 98 Q60 88 52 98 Q44 88 36 98 Q28 90 20 96 Z" fill="#eef2f8" stroke="#8a95a8" stroke-width="3" stroke-linejoin="round"/>
+  <path d="M36 40 L32 84 M86 42 L90 82" stroke="#cdd4df" stroke-width="2" fill="none"/>
+  ${EY(48,72,56,7)}${FM(60,72,9)}`},
+ eco_m3:{ ref:['Algal bloom, caused by excess nitrate and phosphate in water','Ledakan alga, akibat nitrat dan fosfat berlebihan dalam air'], svg:`
+  <rect x="0" y="82" width="120" height="38" fill="#2f6f9a" opacity=".75"/>
+  <path d="M14 86 C10 60 26 40 44 44 C50 26 76 24 82 40 C100 36 112 58 104 80 C112 88 104 98 96 92 C92 102 80 100 78 92 C70 102 56 102 52 92 C44 102 30 100 28 90 C20 98 8 94 14 86 Z" fill="#6cc04a" stroke="#2f6e1f" stroke-width="3" stroke-linejoin="round"/>
+  <g fill="#4e9a32"><circle cx="34" cy="74" r="4"/><circle cx="88" cy="70" r="5"/><circle cx="72" cy="40" r="3"/></g>
+  <g fill="none" stroke="#bff0a8" stroke-width="1.8"><circle cx="24" cy="56" r="3"/><circle cx="98" cy="54" r="2.5"/></g>
+  <text x="8" y="114" font-family="sans-serif" font-weight="800" font-size="9" fill="#cfe9ff">NO₃⁻  PO₄³⁻</text>
+  ${EY(48,74,58,7)}${FM(61,72,10)}`},
+ genetic_m2:{ ref:['Pea pod, from Mendel\'s pea plant experiments','Lenggai kacang pea, daripada eksperimen Mendel'], svg:`
+  <path d="M104 52 C112 42 108 30 100 30" stroke="#2f6e1f" stroke-width="4" fill="none" stroke-linecap="round"/>
+  <path d="M8 72 C28 30 92 28 112 56 C92 94 30 100 8 72 Z" fill="#5fae3a" stroke="#2f6e1f" stroke-width="3" stroke-linejoin="round"/>
+  <path d="M20 72 C40 52 86 48 102 60 C86 82 40 88 20 72 Z" fill="#cfeaa0"/>
+  <circle cx="36" cy="71" r="8.5" fill="#f2d24a" stroke="#a8901a" stroke-width="2"/>
+  <circle cx="54" cy="68" r="9" fill="#8fd35a" stroke="#3d7a2f" stroke-width="2" stroke-dasharray="4 2"/>
+  <circle cx="72" cy="66" r="9" fill="#f2d24a" stroke="#a8901a" stroke-width="2"/>
+  <circle cx="89" cy="64" r="8" fill="#8fd35a" stroke="#3d7a2f" stroke-width="2" stroke-dasharray="4 2"/>
+  <g fill="#111"><circle cx="33" cy="70" r="1.4"/><circle cx="39" cy="70" r="1.4"/><circle cx="51" cy="67" r="1.4"/><circle cx="57" cy="67" r="1.4"/><circle cx="69" cy="65" r="1.4"/><circle cx="75" cy="65" r="1.4"/><circle cx="86" cy="63" r="1.4"/><circle cx="92" cy="63" r="1.4"/></g>
+  ${EY(50,70,44,5.5)}`},
+ genetic_m3:{ ref:['Restriction enzyme, cutting DNA to leave sticky ends','Enzim pembatasan, memotong DNA dan meninggalkan hujung melekit'], svg:`
+  <g stroke-width="4" stroke-linecap="round"><path d="M6 92 H50 M58 92 H114" stroke="#5aa8e8"/><path d="M6 104 H66 M74 104 H114" stroke="#e36aa0"/></g>
+  <path d="M14 92 V104 M24 92 V104 M34 92 V104 M44 92 V104 M62 92 V104 M82 92 V104 M92 92 V104 M102 92 V104" stroke="#ffd166" stroke-width="2"/>
+  <path d="M55 46 L98 82 L92 88 L50 52 Z" fill="#cfd6e0" stroke="#5a6270" stroke-width="2.5" stroke-linejoin="round"/>
+  <path d="M65 46 L22 82 L28 88 L70 52 Z" fill="#cfd6e0" stroke="#5a6270" stroke-width="2.5" stroke-linejoin="round"/>
+  <path d="M56 42 L40 30 M64 42 L80 30" stroke="#c0392b" stroke-width="5" stroke-linecap="round"/>
+  <circle cx="34" cy="22" r="12" fill="none" stroke="#c0392b" stroke-width="6"/><circle cx="86" cy="22" r="12" fill="none" stroke="#c0392b" stroke-width="6"/>
+  <circle cx="60" cy="48" r="13" fill="#e45b5b" stroke="#7a1f1f" stroke-width="3"/>
+  ${EY(55,65,46,4)}<path d="M56 53 Q60 57 64 53" stroke="#111" stroke-width="2" fill="none" stroke-linecap="round"/>`}
+});
+
+// Two extra minion types per zone (the zone's original minion is the third)
+const EXTRA_MINIONS = {
+ cell:[{name:['Slipper Paramecium','Paramecium Selipar'],art:'cell_m2'},{name:['Shapeshifter Amoeba','Amoeba Pengubah Bentuk'],art:'cell_m3'}],
+ membrane:[{name:['Water Wraith','Hantu Molekul Air'],art:'membrane_m2'},{name:['Glucose Golem','Golem Glukosa'],art:'membrane_m3'}],
+ enzyme:[{name:['Starch Serpent','Ular Kanji'],art:'enzyme_m2'},{name:['Lipid Jelly','Obor-obor Lipid'],art:'enzyme_m3'}],
+ mitosis:[{name:['Chromatid Twins','Kembar Kromatid'],art:'mitosis_m2'},{name:['Splitting Cell','Sel Membelah'],art:'mitosis_m3'}],
+ lungs:[{name:['Tar Smoker','Rokok Tar'],art:'lungs_m2'},{name:['Budding Yeast','Yis Bertunas'],art:'lungs_m3'}],
+ blood:[{name:['Aedes Raider','Penyerang Aedes'],art:'blood_m2'},{name:['Tetanus Drumstick','Basilus Tetanus'],art:'blood_m3'}],
+ nerve:[{name:['Kidney Brute','Gergasi Ginjal'],art:'nerve_m2'},{name:['Sweat Sprite','Pari-pari Peluh'],art:'nerve_m3'}],
+ photo:[{name:['Sap-sucking Aphid','Afid Penghisap Sap'],art:'photo_m2'},{name:['Stoma Mouth','Mulut Stoma'],art:'photo_m3'}],
+ eco:[{name:['Plastic Phantom','Hantu Plastik'],art:'eco_m2'},{name:['Algal Bloom Ooze','Lendir Ledakan Alga'],art:'eco_m3'}],
+ genetic:[{name:['Mendel\'s Pea Pod','Lenggai Kacang Mendel'],art:'genetic_m2'},{name:['Restriction Snipper','Gunting Enzim Pembatasan'],art:'genetic_m3'}]
+};
+// ======================= STATE =======================
+const KEY = 'bioDungeonSave_v1', IMPORT_KEY = 'bioDungeonImports';
+let S = load();
+if(S && !S.zs) S.zs = {};
+let B = null;            // battle state
+let SCREEN = null;       // function that re-renders the current screen
+const app = document.getElementById('app');
+
+function load(){ try{ return JSON.parse(localStorage.getItem(KEY)); }catch(e){ return null; } }
+function save(){ try{ localStorage.setItem(KEY, JSON.stringify(S)); }catch(e){} queueSync(); }
+function esc(s){ return String(s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function shuffle(a){ a=a.slice(); for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];} return a; }
+function clsOf(id){ return CLASSES.find(c=>c.id===id) || CLASSES[0]; }
+function cls(){ return clsOf(S.cls); }
+function zone(id){ return ZONES.find(z=>z.id===id); }
+function bonusIn(zid){ return cls().zones.includes(zid); }
+function toast(msg){ const el=document.createElement('div'); el.className='toast'; el.innerHTML=msg; document.body.appendChild(el); setTimeout(()=>el.remove(),2500); }
+function pct(a,b){ return Math.max(0,Math.min(100, b? a/b*100 : 0)); }
+function qd(z,qi){ return z.q[qi][LANG==='bm'?'bm':'en']; } // [question, options, explanation]
+function show(fn){ if(fn!==dashScreen) stopDash(); SCREEN=fn; fn(); window.scrollTo(0,0); }
+
+function renderLangBar(){
+  document.getElementById('langbar').innerHTML =
+    `<button class="${LANG==='bm'?'on':''}" onclick="setLang('bm')">BM</button><button class="${LANG==='en'?'on':''}" onclick="setLang('en')">EN</button>`;
+  document.documentElement.lang = LANG==='bm' ? 'ms' : 'en';
+}
+function setLang(l){
+  LANG = l; try{ localStorage.setItem('bioLang', l); }catch(e){}
+  renderLangBar(); if(SCREEN) SCREEN();
+}
+
+// ======================= SCREENS =======================
+function titleScreen(){
+  app.innerHTML = `
+    <div class="hero">🐉</div>
+    <h1>Biology Dungeon</h1>
+    <p class="sub">${t('subtitle')}</p>
+    <div class="panel">
+      <p style="margin-top:0;line-height:1.5">${t('intro')}</p>
+      <button class="btn block" style="margin-top:14px;font-size:18px" onclick="show(joinScreen)">${t('joinBtnShort')}</button>
+      <div class="grid2" style="margin-top:10px">
+        ${S ? `<button class="btn ghost block" onclick="show(mapScreen)">${t('cont')}${esc(S.name)}</button>` : ''}
+        <button class="btn ghost block" onclick="pendingJoin=null;show(classScreen)">${t('newAdv')}</button>
+      </div>
+      <button class="btn ghost block" style="margin-top:10px" onclick="dashCtx=null;show(hostScreen)">${t('hostBtn')}</button>
+    </div>
+    <p class="muted center" style="font-size:13px">${t('savedNote')}</p>`;
+}
+
+let pickCls = null, draftName = '';
+function classScreen(){
+  app.innerHTML = `
+    <h2 class="center">${t('create')}</h2>
+    <p class="sub">${t('clsHint')}</p>
+    <div class="panel">
+      <label class="muted" style="font-size:14px">${t('heroName')}</label>
+      <input type="text" id="nm" maxlength="20" placeholder="${esc(t('namePh'))}" value="${esc(draftName)}" oninput="draftName=this.value" style="margin:6px 0 14px">
+      <div class="grid2">
+        ${CLASSES.map(c=>`
+          <button class="cls ${pickCls===c.id?'sel':''}" onclick="pickCls='${c.id}';classScreen()">
+            <span class="ic">${c.icon}</span><b>${L(c.name)}</b>
+            <small>${L(c.desc)}</small>
+            <small style="margin-top:6px">❤️ ${c.hp} HP · 📜 ${c.notes} ${t('notes')}</small>
+          </button>`).join('')}
+      </div>
+      <button class="btn block" style="margin-top:14px" ${pickCls?'':'disabled'} onclick="startGame()">${t('enter')}</button>
+    </div>
+    <button class="btn ghost small" onclick="show(pendingJoin?joinScreen:titleScreen)">${t('back')}</button>`;
+}
+function startGame(){
+  const c = clsOf(pickCls);
+  const name = (draftName.trim() || t('nameless')).slice(0,20);
+  S = {name, cls:c.id, level:1, xp:0, maxHp:c.hp, hp:c.hp, notes:c.notes, potions:2, cleared:[], wrong:{}, zs:{}, correct:0, total:0, unlockAll:false};
+  if(pendingJoin){ S.pin = pendingJoin.pin; S.room = pendingJoin.room; pendingJoin = null; toast(t('joined')); }
+  pickCls = null; draftName = '';
+  save(); show(mapScreen);
+}
+
+function hud(){
+  const c = cls();
+  return `<div class="panel">
+    <div class="row" style="justify-content:space-between">
+      <div><h3>${c.icon} ${esc(S.name)}</h3><span class="muted" style="font-size:13px">${t('level')} ${S.level} ${L(c.name)}</span></div>
+      <div class="muted" style="font-size:13px;text-align:right">${t('acc')}<br><b style="color:var(--text)">${S.total?Math.round(S.correct/S.total*100):0}%</b></div>
+    </div>
+    <div class="hud" style="margin-top:8px">
+      <div><div class="stat"><span>❤️ HP</span><span>${S.hp}/${S.maxHp}</span></div><div class="bar hpbar"><i style="width:${pct(S.hp,S.maxHp)}%"></i></div></div>
+      <div><div class="stat"><span>✦ XP</span><span>${S.xp}/100</span></div><div class="bar xpbar"><i style="width:${pct(S.xp,100)}%"></i></div></div>
+    </div>
+    <div class="chips"><span class="chip">🧪 ${t('potions')}: ${S.potions}</span><span class="chip">📜 ${t('notes')}: ${S.notes}</span><span class="chip">🏆 ${t('zones')}: ${S.cleared.length}/${ZONES.length}</span></div>
+  </div>`;
+}
+
+function isOpen(i){ return S.unlockAll || i===0 || S.cleared.includes(ZONES[i-1].id); }
+
+function mapScreen(){
+  if(!S) return show(titleScreen);
+  B = null;
+  const zoneBtn = (z,i)=>{
+    const done = S.cleared.includes(z.id), open = isOpen(i);
+    const st = done ? 'done' : open ? 'open' : 'locked';
+    const tag = done ? t('cleared') : open ? t('enterZ') : '🔒';
+    return `<button class="zone ${st}" ${open?`onclick="startZone('${z.id}')"`:'disabled'}>
+      <span class="zi">${z.icon}</span>
+      <span class="zt"><b>${L(z.name)}</b>${bonusIn(z.id)?' <span class="goldc" style="font-size:12px">★ +3</span>':''}<small>${L(z.topic)}</small></span>
+      <span class="tag">${tag}</span></button>`;
+  };
+  const classBox = S.pin
+    ? `<div class="note row" style="justify-content:space-between"><span>🏫 ${t('inClass')}: <b>${esc(S.room||'')}</b> · PIN ${fmtPin(S.pin)}</span><button class="btn ghost small" onclick="leaveClass()">${t('leave')}</button></div>
+       <button class="btn block" onclick="dashCtx=null;show(dashScreen)">${t('classBtn')}</button>`
+    : `<div class="note">${t('soloNote')}</div><button class="btn ghost block" onclick="show(joinScreen)">${t('joinBtnShort')}</button>`;
+  app.innerHTML = `${hud()}
+    ${classBox}
+    <div class="formhdr">${t('f4')}</div>
+    <div class="path">${ZONES.map((z,i)=>z.form===4?zoneBtn(z,i):'').join('')}</div>
+    <div class="formhdr">${t('f5')}</div>
+    <div class="path">${ZONES.map((z,i)=>z.form===5?zoneBtn(z,i):'').join('')}</div>
+    <div class="panel" style="margin-top:16px">
+      <button class="btn ghost block" onclick="show(journalScreen)">${t('journalBtn', Object.keys(S.wrong).length)}</button>
+      <div class="row" style="justify-content:space-between;margin-top:12px">
+        <label class="toggle"><input type="checkbox" ${S.unlockAll?'checked':''} onchange="S.unlockAll=this.checked;save();mapScreen()"> ${t('teacherMode')}</label>
+        <button class="btn ghost small" onclick="confirmReset()">${t('reset')}</button>
+      </div>
+      <div id="rstBox"></div>
+    </div>`;
+}
+
+function confirmReset(){
+  document.getElementById('rstBox').innerHTML = `<div class="note" style="border-color:var(--bad);margin:12px 0 0">
+    <p style="margin-top:0">${t('resetQ')}</p>
+    <div class="row"><button class="btn small" style="background:var(--bad);color:#fff" onclick="doReset()">${t('yesReset')}</button>
+    <button class="btn ghost small" onclick="document.getElementById('rstBox').innerHTML=''">${t('cancel')}</button></div></div>`;
+}
+function doReset(){ S=null; try{ localStorage.removeItem(KEY); }catch(e){} show(titleScreen); }
+
+function journalScreen(){
+  const items = Object.values(S.wrong).map(w=>{
+    const z = zone(w.z); if(!z || !z.q[w.qi]) return '';
+    const [q,o,e] = qd(z,w.qi);
+    return `<div class="jitem"><div class="muted" style="font-size:12px">${z.icon} ${L(z.name)}</div>
+      <div style="font-weight:700;margin:4px 0">${q}</div>
+      <div class="good">✔ ${o[0]}</div><div class="expl">${e}</div></div>`;
+  }).join('');
+  app.innerHTML = `<h2>${t('jTitle')}</h2>
+    <p class="muted">${t('jDesc')}</p>
+    <div class="panel">${items || `<p class="center muted">${t('jEmpty')}</p>`}</div>
+    <button class="btn ghost" onclick="show(mapScreen)">${t('backMap')}</button>`;
+}
+
+// ======================= BATTLE =======================
+function startZone(zid){
+  const z = zone(zid);
+  S.hp = S.maxHp; save(); // rest at camp before each zone
+  // three DIFFERENT minions in random order, then the boss
+  const types = shuffle([{name:z.minion.name, art:z.id+'_m'}, ...EXTRA_MINIONS[z.id]]);
+  const minions = types.map(m=>({kind:'minion', name:m.name, art:m.art, hp:12, max:12, dmg:6}));
+  B = { z, idx:0,
+    foes:[ ...minions, {kind:'boss', name:z.boss.name, art:z.id+'_b', hp:34, max:34, dmg:9, boss:true} ],
+    pool: shuffle(z.q.map((_,i)=>i)) };
+  askQuestion();
+  show(renderBattle);
+}
+function foe(){ return B.foes[B.idx]; }
+function fname(f){ return L(f.name || B.z[f.kind].name); }
+
+function askQuestion(){
+  if(!B.pool.length) B.pool = shuffle(B.z.q.map((_,i)=>i));
+  B.qi = B.pool.pop();
+  // the correct answer (option 0) never sits in the same position as the last time this question was shown
+  const key = B.z.id+':'+B.qi; S.lastPos = S.lastPos || {};
+  const prev = S.lastPos[key];
+  do { B.order = shuffle([0,1,2,3]); } while (B.order.indexOf(0) === prev);
+  S.lastPos[key] = B.order.indexOf(0);
+  B.removed = []; B.answered = false; B.noted = false; B.last = null;
+}
+
+function resultMsg(r){
+  const f = foe();
+  if(r.ok) return (r.kind==='crit'?t('crit',r.dmg):r.kind==='glance'?t('glance',r.dmg):t('hit',r.dmg)) + ` <span class="muted">${t('xp10')}</span>`;
+  return r.kind==='dodge' ? t('dodge', fname(f), r.total) : t('hurt', fname(f), r.total, r.dmg);
+}
+
+function renderBattle(animate=false){
+  const z = B.z, f = foe(), [q,o,e] = qd(z,B.qi), r = B.last;
+  const optCls = i => !B.answered ? (B.removed.includes(i)?'gone':'') : (i===0?'right': (r && i===r.i ? 'wrong' : (B.removed.includes(i)?'gone':'')));
+  const rollLabel = r ? (r.ok ? t('atkRoll') + (r.bonus?t('bonusDmg'):'') : t('dodgeRoll') + (r.bonus?t('bonus3'):'') + t('need14')) : '';
+  app.innerHTML = `
+    <div class="row" style="justify-content:space-between;margin-bottom:10px">
+      <span class="muted">${z.icon} <b style="color:var(--text)">${L(z.name)}</b></span>
+      <button class="btn ghost small" onclick="show(mapScreen)">${t('flee')}</button>
+    </div>
+    <div class="panel enemy">
+      <div class="foes">${B.foes.map((x,i)=>`<span class="${i===B.idx?'now':''} ${i<B.idx?'down':''}">${x.boss?'👑':i+1}</span>`).join('')}</div>
+      ${f.boss?`<span class="boss-tag">${t('boss')}</span>`:''}
+      <div><span class="face ${r && !animate && r.ok ? (f.hp<=0?'dead':'') : ''}" id="face">${monSvg(f.art,130)}</span></div>
+      <h3>${fname(f)}</h3>
+      <div class="ref">🔬 ${t('refLbl')}: ${L(MON[f.art].ref)}</div>
+      <div class="stat" style="max-width:300px;margin:6px auto 3px"><span>HP</span><span>${Math.max(0,f.hp)}/${f.max}</span></div>
+      <div class="bar ehp" style="max-width:300px;margin:0 auto"><i style="width:${pct(animate&&r&&r.ok?f.hp+r.dmg:f.hp,f.max)}%"></i></div>
+    </div>
+    <div class="panel">
+      <div class="stat"><span>❤️ ${esc(S.name)} · ${t('lv')} ${S.level}</span><span>${S.hp}/${S.maxHp}</span></div>
+      <div class="bar hpbar" style="margin-bottom:14px"><i id="php" style="width:${pct(animate&&r&&!r.ok&&r.kind==='hurt'?S.hp+r.dmg:S.hp,S.maxHp)}%"></i></div>
+      <div class="q">${q}</div>
+      <div class="opts">${B.order.map(i=>`<button class="opt ${optCls(i)}" ${B.answered||B.removed.includes(i)?'disabled':''} onclick="answer(${i})">${o[i]}</button>`).join('')}</div>
+      ${B.answered ? '' : `<div class="row" style="margin-top:12px">
+        <button class="btn ghost small" ${S.notes<1||B.noted?'disabled':''} onclick="useNotes()">📜 ${t('notes')} (${S.notes})</button>
+        <button class="btn ghost small" ${S.potions<1||S.hp>=S.maxHp?'disabled':''} onclick="usePotion()">${t('potionBtn')} (${S.potions})</button>
+      </div>`}
+      ${r ? `<div class="result">
+        <div class="dice"><div class="d20 ${animate?'roll':r.cls}" id="die">${animate?'?':r.r}</div>
+          <div><div class="muted" style="font-size:13px">${rollLabel}</div><div id="rmsg" class="${animate?'muted':''}">${animate?t('rolling'):resultMsg(r)}</div></div></div>
+        <div class="expl">${r.ok?'':`<b>${t('answer')}</b> ${o[0]}<br>`}${e}</div>
+        <button class="btn block" id="cont" style="margin-top:14px;${animate?'visibility:hidden':''}" onclick="afterTurn()">${t('next')}</button>
+      </div>` : ''}
+    </div>`;
+  if(animate) runDice();
+}
+
+function runDice(){
+  const r = B.last, f = foe(), die = document.getElementById('die');
+  let n = 0;
+  const spin = setInterval(()=>{
+    if(!document.getElementById('die')){ clearInterval(spin); return; }
+    die.textContent = 1+Math.floor(Math.random()*20);
+    if(++n>8){
+      clearInterval(spin);
+      die.textContent = r.r; if(r.cls) die.classList.add(r.cls);
+      const m = document.getElementById('rmsg'); m.innerHTML = resultMsg(r); m.classList.remove('muted');
+      document.getElementById('cont').style.visibility = 'visible';
+      if(r.ok){ document.getElementById('face').classList.add(f.hp<=0?'dead':'hit'); document.querySelector('.ehp>i').style.width = pct(f.hp,f.max)+'%'; }
+      document.getElementById('php').style.width = pct(S.hp,S.maxHp)+'%';
+    }
+  }, 65);
+}
+
+function useNotes(){
+  if(S.notes<1 || B.noted) return;
+  B.removed = shuffle([1,2,3]).slice(0,2); B.noted = true; S.notes--; save();
+  renderBattle();
+}
+function usePotion(){
+  if(S.potions<1) return;
+  S.potions--; S.hp = Math.min(S.maxHp, S.hp+15); save();
+  toast('🧪 +15 HP'); renderBattle();
+}
+
+function answer(i){
+  if(B.answered) return;
+  B.answered = true;
+  const z = B.z, f = foe(), ok = i===0;
+  const key = z.id+':'+B.qi;
+  S.total++;
+  const zs = S.zs[z.id] || (S.zs[z.id] = [0,0]); zs[1]++;
+  if(ok){ S.correct++; zs[0]++; S.xp += 10; delete S.wrong[key]; } else { S.wrong[key] = {z:z.id, qi:B.qi}; }
+  const bonus = bonusIn(z.id) ? 3 : 0;
+  const r = 1 + Math.floor(Math.random()*20);
+  const res = {i, ok, r, bonus, cls:''};
+  if(ok){
+    let dmg = 4 + Math.ceil(r/2) + bonus + (S.level-1);
+    if(r===20){ dmg*=2; res.kind='crit'; res.cls='crit'; }
+    else if(r===1){ dmg=Math.ceil(dmg/2); res.kind='glance'; res.cls='fail'; }
+    else res.kind='hit';
+    res.dmg = dmg; f.hp -= dmg;
+  } else {
+    res.total = r + bonus;
+    if(r===20 || res.total>=14){ res.kind='dodge'; res.cls = r===20?'crit':''; }
+    else { res.kind='hurt'; res.dmg=f.dmg; S.hp -= f.dmg; res.cls = r===1?'fail':''; }
+  }
+  B.last = res;
+  save();
+  renderBattle(true);
+}
+
+function levelCheck(){
+  while(S.xp>=100){ S.xp-=100; S.level++; S.maxHp+=5; S.hp=Math.min(S.maxHp,S.hp+5); toast(t('levelUp',S.level)); }
+}
+
+function afterTurn(){
+  const f = foe();
+  if(S.hp<=0){ S.hp=0; save(); return show(defeatScreen); }
+  if(f.hp<=0){
+    S.xp += f.boss?60:20;
+    let loot = [];
+    if(f.boss){ S.potions++; S.notes++; loot=['potion','note']; }
+    else if(Math.random()<0.35){ if(Math.random()<0.5){S.potions++;loot=['potion'];} else {S.notes++;loot=['note'];} }
+    levelCheck();
+    if(f.boss){ if(!S.cleared.includes(B.z.id)) S.cleared.push(B.z.id); save(); B.loot = loot; return show(clearedScreen); }
+    save();
+    toast(`${monSvg(f.art,28)} ${t('defeated')}${loot.length?' · '+t('loot')+': '+loot.map(x=>t(x)).join(', '):''}`);
+    B.idx++;
+    if(foe().boss) setTimeout(()=>toast(t('appears', fname(foe()))), 900);
+  } else { levelCheck(); save(); }
+  askQuestion();
+  renderBattle();
+}
+
+function clearedScreen(){
+  const z = B.z, all = S.cleared.length===ZONES.length;
+  app.innerHTML = `<div class="hero">${all?'👑':'🏆'}</div>
+    <h1>${all?t('win'):t('zoneCleared')}</h1>
+    <p class="sub">${t('beat', L(z.boss.name), L(z.name))}</p>
+    <div class="panel center">
+      <p style="margin-top:0">${t('xp60')} ${B.loot.map(x=>t(x)).join(', ')}</p>
+      ${all?`<p>${t('allDone', Math.round(S.correct/S.total*100), S.total)}</p><p class="muted">${t('grand')}</p>`:''}
+      <button class="btn block" onclick="show(mapScreen)">${t('retMap')}</button>
+    </div>`;
+}
+
+function defeatScreen(){
+  app.innerHTML = `<div class="hero">💫</div><h1>${t('fainted')}</h1>
+    <p class="sub">${t('tooStrong', fname(B.foes[B.idx]))}</p>
+    <div class="panel center">
+      <p style="margin-top:0">${t('keep')}</p>
+      <div class="grid2"><button class="btn block" onclick="startZone('${B.z.id}')">${t('retry')}</button>
+      <button class="btn ghost block" onclick="show(journalScreen)">${t('review')}</button></div>
+      <button class="btn ghost block" style="margin-top:10px" onclick="show(mapScreen)">${t('retMap')}</button>
+    </div>`;
+}
+
+// ======================= LIVE CLASS (Firebase) =======================
+// STEP 1 of SETUP.md: paste your Firebase web-app config here.
+const FIREBASE_CONFIG = {
+  apiKey: "AIzaSyAiZN6HJJg7RTO_FRtzXlrsRAb6ppwx0pM",
+  authDomain: "bio-dungeon.firebaseapp.com",
+  databaseURL: "https://bio-dungeon-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "bio-dungeon",
+  appId: "1:187719383357:web:d35074d105a3ee32b8ed54"
+};
+const FB_READY = typeof firebase !== 'undefined' && !!FIREBASE_CONFIG.apiKey && !FIREBASE_CONFIG.apiKey.startsWith('PASTE');
+let FDB = null, UID = null, authP = null;
+function fbInit(){
+  if(!FB_READY) return Promise.resolve(false);
+  if(authP) return authP;
+  authP = (async()=>{
+    try{
+      if(!firebase.apps.length) firebase.initializeApp(FIREBASE_CONFIG);
+      FDB = firebase.database();
+      let user = await new Promise(res=>{ const off = firebase.auth().onAuthStateChanged(u=>{ off(); res(u); }); });
+      if(!user) user = (await firebase.auth().signInAnonymously()).user;   // no account needed
+      UID = user.uid; return true;
+    }catch(e){ console.warn('Firebase init failed', e); authP = null; return false; }
+  })();
+  return authP;
+}
+const pts = r => r.correct*100 + r.cleared.length*500;
+
+// ---- student progress sync ----
+let syncTimer=null, syncing=false, syncAgain=false, lastSent='', syncErr=false;
+function record(){
+  const r = {v:1, nick:S.name, cls:S.cls, level:S.level, cleared:S.cleared.slice(), correct:S.correct, total:S.total, zs:S.zs||{}, wrong:Object.keys(S.wrong).length};
+  r.points = pts(r); return r;
+}
+function queueSync(){ if(!S || !S.pin) return; clearTimeout(syncTimer); syncTimer = setTimeout(doSync, 1200); }
+async function doSync(){
+  if(!S || !S.pin) return;
+  if(!(await fbInit())) { syncErr = true; return; }
+  const body = record(), sig = S.pin + JSON.stringify(body);
+  if(sig === lastSent) return;
+  if(syncing){ syncAgain = true; return; }
+  syncing = true;
+  try{ await FDB.ref(`games/${S.pin}/players/${UID}`).set({...body, updated: firebase.database.ServerValue.TIMESTAMP}); lastSent = sig; syncErr = false; }
+  catch(e){ syncErr = /PERMISSION/i.test(String(e && (e.code||e.message))) ? 'locked' : true; if(syncErr===true) setTimeout(queueSync, 5000); }
+  syncing = false;
+  if(syncAgain){ syncAgain = false; doSync(); }
+}
+
+// ---- join with PIN ----
+let pendingJoin = null, joinMsg = '';
+function joinScreen(){
+  app.innerHTML = `
+    <div class="hero">🎮</div>
+    <h1>${t('joinTitle')}</h1>
+    <p class="sub">${t('joinSub')}</p>
+    <div class="panel">
+      ${FB_READY ? '' : `<div class="note">${t('notSetup')}</div>`}
+      <label class="muted" style="font-size:14px">${t('pinLbl')}</label>
+      <input type="text" id="pin" inputmode="numeric" maxlength="7" placeholder="123 456" class="bigin" style="margin:6px 0 12px">
+      <label class="muted" style="font-size:14px">${t('nickLbl')}</label>
+      <input type="text" id="nick" maxlength="20" placeholder="${esc(t('namePh'))}" value="${esc(S?S.name:'')}" style="margin:6px 0 14px">
+      <button class="btn block" id="joinBtn" onclick="doJoin()" ${FB_READY?'':'disabled'}>${t('joinBtn')}</button>
+      <div id="jmsg" class="muted center" style="margin-top:10px;font-size:14px">${joinMsg}</div>
+    </div>
+    <button class="btn ghost small" onclick="show(titleScreen)">${t('back')}</button>`;
+}
+async function doJoin(){
+  const pin = document.getElementById('pin').value.replace(/\D/g,'');
+  const nick = document.getElementById('nick').value.trim().slice(0,20);
+  const msg = m => { document.getElementById('jmsg').innerHTML = m; };
+  if(pin.length !== 6) return msg(`<span class="badc">${t('badPin')}</span>`);
+  if(!nick) return msg(`<span class="badc">${t('needNick')}</span>`);
+  document.getElementById('joinBtn').disabled = true; msg(t('joining'));
+  try{
+    if(!(await fbInit())) throw 0;
+    const snap = await FDB.ref(`games/${pin}/meta`).get();
+    if(!snap.exists()){ document.getElementById('joinBtn').disabled=false; return msg(`<span class="badc">${t('noGame')}</span>`); }
+    const meta = snap.val();
+    if(!meta.open){ document.getElementById('joinBtn').disabled=false; return msg(`<span class="badc">${t('closed')}</span>`); }
+    if(S){ S.pin = pin; S.room = String(meta.title||'').slice(0,40); S.name = nick; lastSent=''; save(); toast(t('joined')); show(mapScreen); }
+    else { pendingJoin = {pin, room:String(meta.title||'').slice(0,40)}; draftName = nick; show(classScreen); }
+  }catch(e){ document.getElementById('joinBtn').disabled=false; msg(`<span class="badc">${t('netErr')}</span>`); }
+}
+function leaveClass(){ if(!S) return; S.pin = null; S.room = null; save(); show(mapScreen); }
+
+// ---- teacher: host a class ----
+const ROOMS_KEY = 'bioDungeonRooms';
+function loadRooms(){ try{ return JSON.parse(localStorage.getItem(ROOMS_KEY)) || []; }catch(e){ return []; } }
+function saveRooms(r){ try{ localStorage.setItem(ROOMS_KEY, JSON.stringify(r)); }catch(e){} }
+let dashCtx = null; // {pin, host}
+function hostScreen(){
+  const rooms = loadRooms();
+  app.innerHTML = `
+    <div class="row" style="justify-content:space-between;margin-bottom:6px"><h2>${t('hostTitle')}</h2>
+      <button class="btn ghost small" onclick="show(titleScreen)">${t('back')}</button></div>
+    <p class="muted">${t('hostSub')}</p>
+    ${FB_READY ? '' : `<div class="note">${t('notSetup')}</div>`}
+    <div class="panel">
+      <label class="muted" style="font-size:14px">${t('roomName')}</label>
+      <input type="text" id="rname" maxlength="40" placeholder="${esc(t('roomPh'))}" style="margin:6px 0 12px">
+      <button class="btn block" id="mk" onclick="createRoom()" ${FB_READY?'':'disabled'}>${t('createRoom')}</button>
+      <div id="hmsg" class="muted center" style="margin-top:8px;font-size:14px"></div>
+    </div>
+    <div class="panel">
+      <h3>${t('myRooms')}</h3>
+      ${rooms.length ? rooms.map(r=>`<div class="scard row" style="justify-content:space-between">
+          <div><b>${esc(r.title)}</b><div class="muted" style="font-size:13px">PIN ${fmtPin(r.pin)}</div></div>
+          <button class="btn small" onclick="openRoom('${r.pin}')">${t('openDash')}</button></div>`).join('')
+        : `<p class="muted">${t('noRooms')}</p>`}
+      <p class="muted" style="font-size:12.5px;margin-bottom:0">${t('hostNote')}</p>
+    </div>`;
+}
+const fmtPin = p => String(p).replace(/(\d{3})(\d{3})/, '$1 $2');
+async function createRoom(){
+  const title = (document.getElementById('rname').value.trim() || t('roomPh')).slice(0,40);
+  const msg = m => { document.getElementById('hmsg').innerHTML = m; };
+  document.getElementById('mk').disabled = true; msg(t('creating'));
+  if(!(await fbInit())){ document.getElementById('mk').disabled=false; return msg(`<span class="badc">${t('netErr')}</span>`); }
+  for(let i=0;i<6;i++){
+    const pin = String(100000 + Math.floor(Math.random()*900000));
+    try{
+      await FDB.ref(`games/${pin}/meta`).set({host:UID, title, open:true, created:firebase.database.ServerValue.TIMESTAMP});
+      const rooms = loadRooms(); rooms.unshift({pin, title}); saveRooms(rooms);
+      return openRoom(pin);
+    }catch(e){ /* PIN taken by another teacher: try another */ }
+  }
+  document.getElementById('mk').disabled=false; msg(`<span class="badc">${t('netErr')}</span>`);
+}
+function openRoom(pin){ dashCtx = {pin, host:true}; show(dashScreen); }
+async function setOpen(v){ try{ await FDB.ref(`games/${dashCtx.pin}/meta/open`).set(v); }catch(e){ toast(t('netErr')); } }
+async function removePlayer(id){
+  if(dash.confirmRm !== id){ dash.confirmRm = id; renderDash(); return; }
+  dash.confirmRm = null;
+  try{ await FDB.ref(`games/${dashCtx.pin}/players/${id}`).remove(); }catch(e){ toast(t('netErr')); }
+}
+
+// ======================= DASHBOARD (live class) =======================
+const dash = {unsub:null, pin:null, rows:[], meta:null, loaded:false, slow:false, err:false, timer:null, sort:'points', confirmRm:null};
+function stopDash(){ if(dash.unsub){ dash.unsub(); dash.unsub=null; dash.pin=null; } clearTimeout(dash.timer); }
+const num = v => (typeof v==='number' && isFinite(v) && v>=0) ? Math.floor(v) : 0;
+function clean(d){
+  d = d || {};
+  const zs = {};
+  if(d.zs && typeof d.zs==='object') ZONES.forEach(z=>{ const a=d.zs[z.id]; if(a && typeof a==='object') zs[z.id]=[num(a[0]),num(a[1])]; });
+  const cl = d.cleared && typeof d.cleared==='object' ? Object.values(d.cleared) : [];
+  const r = { hero:String(d.nick||d.hero||'').slice(0,20), cls:clsOf(d.cls).id, level:Math.max(1,num(d.level)),
+    cleared:[...new Set(cl.filter(id=>ZONES.some(z=>z.id===id)))], correct:num(d.correct), total:num(d.total), zs, wrong:num(d.wrong), updated:num(d.updated) };
+  r.points = pts(r); return r;
+}
+function ctxPin(){ return dashCtx ? dashCtx.pin : (S && S.pin) || null; }
+function isHost(){ return !!(dashCtx && dashCtx.host); }
+
+function dashScreen(){
+  const pin = ctxPin();
+  if(!pin){
+    app.innerHTML = `<div class="hero">📊</div><h1>${t('dTitle')}</h1>
+      <div class="panel center"><p style="margin-top:0">${t('needClass')}</p>
+      <button class="btn block" onclick="show(joinScreen)">${t('joinBtnShort')}</button></div>
+      <button class="btn ghost small" onclick="show(S?mapScreen:titleScreen)">${t('back')}</button>`;
+    return;
+  }
+  if(dash.pin !== pin){
+    stopDash();
+    Object.assign(dash, {pin, rows:[], meta:null, loaded:false, slow:false, err:false});
+    dash.timer = setTimeout(()=>{ dash.slow = true; if(SCREEN===dashScreen) renderDash(); }, 10000);
+    fbInit().then(ok=>{
+      if(dash.pin !== pin) return;
+      if(!ok){ dash.err = true; clearTimeout(dash.timer); if(SCREEN===dashScreen) renderDash(); return; }
+      const ref = FDB.ref(`games/${pin}`);
+      const h = ref.on('value', snap=>{
+        const v = snap.val() || {};
+        dash.meta = v.meta || null;
+        dash.rows = Object.entries(v.players || {}).map(([id,d])=>({id, ...clean(d)}));
+        dash.loaded = true; dash.slow = false; clearTimeout(dash.timer);
+        if(SCREEN===dashScreen) renderDash();
+      }, ()=>{ dash.err = true; clearTimeout(dash.timer); if(SCREEN===dashScreen) renderDash(); });
+      dash.unsub = ()=>ref.off('value', h);
+    });
+  }
+  renderDash();
+}
+function ago(ts){
+  if(!ts) return '–';
+  const s = Math.max(0,(Date.now()-ts)/1000);
+  if(s<60) return t('justNow'); if(s<3600) return t('mAgo',Math.floor(s/60)); if(s<86400) return t('hAgo',Math.floor(s/3600)); return t('dAgo',Math.floor(s/86400));
+}
+function accClass(a){ return a<50?'accb':a<75?'acca':'accg'; }
+
+function renderDash(){
+  const rows = dash.rows, n = rows.length, host = isHost(), meta = dash.meta;
+  let status = '';
+  if(dash.err) status = `<div class="note">${t('dbErr')}</div>`;
+  else if(dash.slow) status = `<div class="note">${t('slow')}</div>`;
+  else if(!dash.loaded) status = `<div class="note">${t('connecting')}</div>`;
+  else if(!meta) status = `<div class="note">${t('noGame')}</div>`;
+  if(!host && S && S.pin && syncErr) status += `<div class="note">${t(syncErr==='locked'?'syncLocked':'syncErr')}</div>`;
+  const joinUrl = location.href.split('#')[0].split('?')[0];
+  const banner = `<div class="pinbar">
+      <div><small>${t('joinAt')}</small><div class="url">${esc(joinUrl)}</div></div>
+      <div style="text-align:right"><small>${t('gamePin')}</small><div class="bigpin">${fmtPin(dash.pin)}</div></div>
+    </div>`;
+  const hostCtl = host && meta ? `<div class="row" style="margin-bottom:14px">
+      ${meta.open ? `<span class="chip good">● ${t('isOpen')}</span><button class="btn ghost small" onclick="setOpen(false)">${t('lock')}</button>`
+                  : `<span class="chip badc">● ${t('isClosed')}</span><button class="btn ghost small" onclick="setOpen(true)">${t('unlock')}</button>`}
+    </div>` : '';
+  // leaderboard
+  const lead = rows.slice().sort((a,b)=>b.points-a.points).slice(0,10);
+  const medal = i => ['🥇','🥈','🥉'][i] || `<span class="rk">${i+1}</span>`;
+  const leaderboard = `<div class="panel">
+      <h3>${t('leader')}</h3>
+      ${lead.length ? lead.map((r,i)=>`<div class="lrow ${r.id===UID?'me':''}"><span class="md">${medal(i)}</span>
+        <span class="ln">${clsOf(r.cls).icon} ${esc(r.hero||'?')}${r.id===UID?` <span class="badge">${t('you')}</span>`:''}</span>
+        <span class="lp">${r.points.toLocaleString()} ${t('ptsLbl')}</span></div>`).join('')
+        : `<p class="muted center">${t('empty')}</p>`}
+      <p class="muted" style="font-size:12px;margin-bottom:0">${t('ptsRule')}</p>
+    </div>`;
+  // KPIs
+  const totC = rows.reduce((a,r)=>a+r.correct,0), totT = rows.reduce((a,r)=>a+r.total,0);
+  const avgZ = n ? (rows.reduce((a,r)=>a+r.cleared.length,0)/n).toFixed(1) : '0';
+  const topics = ZONES.map(z=>{ let c=0,tt=0; rows.forEach(r=>{ const a=r.zs[z.id]; if(a){c+=a[0];tt+=a[1];} }); return {z, c, tt, a: tt?Math.round(c/tt*100):null}; })
+    .sort((x,y)=> (x.a===null) - (y.a===null) || (x.a??0) - (y.a??0));
+  const acc = r => r.total ? r.correct/r.total : -1;
+  const sorted = rows.slice().sort((a,b)=>{
+    if(dash.sort==='acc') return acc(b)-acc(a);
+    if(dash.sort==='recent') return b.updated-a.updated;
+    if(dash.sort==='name') return (a.hero||'').localeCompare(b.hero||'');
+    return b.points-a.points;
+  });
+  const sortBtn = (k,l)=>`<button class="btn ghost small ${dash.sort===k?'on':''}" onclick="dash.sort='${k}';renderDash()">${t(l)}</button>`;
+  const card = r=>{
+    const c = clsOf(r.cls);
+    let weak = null;
+    ZONES.forEach(z=>{ const a=r.zs[z.id]; if(a && a[1]>=2){ const p=a[0]/a[1]; if(!weak || p<weak.p) weak={z,p}; } });
+    return `<div class="scard ${r.id===UID?'me':''}">
+      <div class="top">
+        <div><span class="nm">${c.icon} ${esc(r.hero||'?')}</span>${r.id===UID?` <span class="badge">${t('you')}</span>`:''}
+          <div class="real">${L(c.name)} · ${t('lv')} ${r.level} · ${r.points.toLocaleString()} ${t('ptsLbl')}</div></div>
+        <div class="muted" style="font-size:13px;text-align:right">${t('active')}: ${ago(r.updated)}</div>
+      </div>
+      <div class="dots">${ZONES.map(z=>`<span class="${r.cleared.includes(z.id)?'d':''}" title="${esc(L(z.name))}"></span>`).join('')}</div>
+      <div class="minis">
+        <span>🏆 <b>${r.cleared.length}/${ZONES.length}</b> ${t('zones')}</span>
+        <span>🎯 <b>${r.total?Math.round(r.correct/r.total*100):0}%</b> (${r.total} ${t('qs')})</span>
+        <span>📖 <b>${r.wrong}</b> ${t('toReview')}</span>
+        ${weak?`<span>⚠ ${t('weak')}: <b>${weak.z.icon} ${L(weak.z.name)}</b> ${Math.round(weak.p*100)}%</span>`:''}
+      </div>
+      ${host?`<button class="btn ghost small" style="margin-top:8px;${dash.confirmRm===r.id?'border-color:var(--bad);color:var(--bad)':''}" onclick="removePlayer('${r.id.replace(/[^\w-]/g,'')}')">${dash.confirmRm===r.id?t('rmSure'):t('remove')}</button>`:''}
+    </div>`;
+  };
+  const classPanel = `<div class="panel">
+      <h3>${t('classTitle')}</h3>
+      <p class="muted" style="font-size:13px;margin:4px 0 10px">${t('classHint')}</p>
+      <div class="grid2">${CLASSES.map(c=>{
+        const g = rows.filter(r=>r.cls===c.id), k = g.length;
+        const gc = g.reduce((a,r)=>a+r.correct,0), gt = g.reduce((a,r)=>a+r.total,0);
+        const az = k ? g.reduce((a,r)=>a+r.cleared.length,0)/k : 0, al = k ? g.reduce((a,r)=>a+r.level,0)/k : 0;
+        const ga = gt ? Math.round(gc/gt*100) : null;
+        return `<div class="kpi">
+          <div class="row" style="justify-content:space-between"><b style="font-size:16px">${c.icon} ${L(c.name)}</b><span class="muted" style="font-size:12px">${t('nStudents',k)}</span></div>
+          <div class="stat"><span>🏆 ${t('avgZones')}</span><span>${az.toFixed(1)}/${ZONES.length}</span></div>
+          <div class="bar zbar"><i style="width:${pct(az,ZONES.length)}%"></i></div>
+          <div class="stat"><span>🎯 ${t('avgAcc')}</span><span>${ga===null?'–':ga+'%'}</span></div>
+          <div class="bar ${ga===null?'':accClass(ga)}"><i style="width:${ga??0}%"></i></div>
+          <div class="stat" style="margin-top:8px"><span>⭐ ${t('avgLv')}</span><span>${k?al.toFixed(1):'–'}</span></div>
+          <div class="muted" style="font-size:12px;margin-top:4px">${t('bonusZ')}: ${c.zones.map(id=>zone(id).icon).join(' ')}</div>
+        </div>`; }).join('')}</div>
+    </div>`;
+  app.innerHTML = `
+    <div class="row" style="justify-content:space-between;margin-bottom:6px">
+      <h2>${meta && meta.title ? esc(String(meta.title).slice(0,40)) : t('dTitle')}</h2>
+      <button class="btn ghost small" onclick="${host?'dashCtx=null;show(hostScreen)':'show(S?mapScreen:titleScreen)'}">${t('back')}</button>
+    </div>
+    ${banner}${hostCtl}${status}
+    ${leaderboard}
+    <div class="kpis" style="margin-bottom:14px">
+      <div class="kpi"><small>${t('students')}</small><b>${n}</b></div>
+      <div class="kpi"><small>${t('avgAcc')}</small><b>${totT?Math.round(totC/totT*100):0}%</b></div>
+      <div class="kpi"><small>${t('avgZones')}</small><b>${avgZ}</b></div>
+      <div class="kpi"><small>${t('answered')}</small><b>${totT}</b></div>
+    </div>
+    <div class="panel">
+      <h3>${t('topicTitle')}</h3>
+      <p class="muted" style="font-size:13px;margin:4px 0 8px">${t('topicHint')}</p>
+      ${topics.map(x=>`<div class="trow"><span>${x.z.icon} ${L(x.z.name)}</span>
+        <div class="bar ${x.a===null?'':accClass(x.a)}"><i style="width:${x.a??0}%"></i></div>
+        <span class="v">${x.a===null?t('noTry'):x.a+'% · '+x.tt}</span></div>`).join('')}
+    </div>
+    ${classPanel}
+    <div class="panel">
+      <div class="row" style="justify-content:space-between;margin-bottom:10px">
+        <h3>${t('students')} (${n})</h3>
+        <div class="row" style="gap:6px"><span class="muted" style="font-size:13px">${t('sort')}</span>${sortBtn('points','sPts')}${sortBtn('acc','sAcc')}${sortBtn('recent','sRecent')}${sortBtn('name','sName')}</div>
+      </div>
+      ${sorted.length ? sorted.map(card).join('') : `<p class="muted center">${t('empty')}</p>`}
+    </div>`;
+}
+
+renderLangBar();
+show(titleScreen);
+if(S && S.pin) queueSync();
+
+</script>
+</body>
+</html>
