@@ -924,7 +924,7 @@ function mapScreen(){
     <div class="panel" style="margin-top:16px">
       <button class="btn ghost block" onclick="show(journalScreen)">${t('journalBtn', Object.keys(S.wrong).length)}</button>
       <div class="row" style="justify-content:space-between;margin-top:12px">
-        <label class="toggle"><input type="checkbox" ${S.unlockAll?'checked':''} onchange="S.unlockAll=this.checked;save();mapScreen()"> ${t('teacherMode')}</label>
+        ${teacherOK===true ? `<label class="toggle"><input type="checkbox" ${S.unlockAll?'checked':''} onchange="S.unlockAll=this.checked;save();mapScreen()"> ${t('teacherMode')}</label>` : '<span></span>'}
         <button class="btn ghost small" onclick="confirmReset()">${t('reset')}</button>
       </div>
       <div id="rstBox"></div>
@@ -1465,6 +1465,11 @@ renderLangBar();
 const route = () => { if(location.hash === '#teacher') show(hostScreen); };
 window.addEventListener('hashchange', route);
 show(location.hash === '#teacher' ? hostScreen : titleScreen);
+// "Unlock all zones" is a teacher-only switch: show it only on a device verified with the teacher passcode
+if(FB_READY) checkTeacher().then(ok=>{
+  if(!ok && S && S.unlockAll){ S.unlockAll = false; save(); }
+  if(SCREEN===mapScreen) mapScreen();
+});
 if(S && S.pin) queueSync();
 
 </script>
