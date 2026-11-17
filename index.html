@@ -138,6 +138,15 @@ textarea{font-family:ui-monospace,monospace;font-size:12px;resize:vertical;min-h
 .lrow .rk{font-size:14px;color:var(--muted);font-weight:800}
 .lrow .ln{flex:1;font-weight:700}
 .lrow .lp{font-weight:800;color:var(--gold2)}
+.guide summary{cursor:pointer;font-family:Cinzel,serif;font-weight:800;color:var(--gold2);font-size:16px;list-style:none}
+.guide summary::-webkit-details-marker{display:none}
+.guide summary:after{content:' ▾';color:var(--muted)}
+.guide[open] summary:after{content:' ▴'}
+.gtabs{display:flex;gap:6px;margin:12px 0 10px}
+.gtabs button{flex:1}
+.guide ol{margin:0;padding-left:20px;line-height:1.55;font-size:14.5px}
+.guide li{margin-bottom:7px}
+.guide .gtip{font-size:13px;color:var(--muted);margin:10px 0 0}
 .badge{font-size:11px;padding:2px 7px;border-radius:8px;background:#3a2f55;color:var(--gold2);font-weight:800;vertical-align:middle}
 </style>
 </head>
@@ -262,6 +271,39 @@ const T = {
  inClass:['Class','Kelas'], leave:['Leave class','Keluar kelas'],
  classBtn:['🏆 Leaderboard & class progress','🏆 Papan pendahulu & kemajuan kelas'],
  soloNote:['Playing solo. Join a class to appear on the leaderboard.','Bermain sendiri. Sertai kelas untuk muncul di papan pendahulu.'],
+ guideTitle:['📘 Quick guide','📘 Panduan ringkas'], gStu:['🎒 Students','🎒 Pelajar'], gTch:['👩‍🏫 Teachers','👩‍🏫 Guru'],
+ stuSteps:[[
+  'Tap <b>🎮 Join with Game PIN</b>, then type the 6-digit PIN from your teacher and a nickname. No account is needed.',
+  'Choose a hero class. Your class gets <b>+3</b> on dice rolls in its bonus zones (★).',
+  'Pick an open zone on the map. Answer correctly to attack, then the <b>d20</b> decides your damage. A wrong answer lets the monster attack: roll to dodge!',
+  'Stuck? <b>📜 Lab Notes</b> remove two wrong answers. <b>🧪 Potions</b> heal 15 HP.',
+  'Defeat 3 minions and the boss to clear a zone and unlock the next one.',
+  'Revise questions you got wrong in the <b>📖 Mistake Journal</b>. They stay there until you answer them correctly.'
+ ],[
+  'Ketik <b>🎮 Sertai dengan PIN</b>, kemudian taip PIN 6 digit daripada guru dan nama samaran anda. Tiada akaun diperlukan.',
+  'Pilih kelas wira. Kelas anda mendapat <b>+3</b> pada balingan dadu dalam zon bonusnya (★).',
+  'Pilih zon yang terbuka pada peta. Jawab dengan betul untuk menyerang, kemudian dadu <b>d20</b> menentukan kerosakan. Jawapan salah membolehkan raksasa menyerang: baling dadu untuk mengelak!',
+  'Buntu? <b>📜 Nota Makmal</b> membuang dua jawapan salah. <b>🧪 Posyen</b> memulihkan 15 HP.',
+  'Tewaskan 3 minion dan bos untuk menamatkan zon dan membuka zon seterusnya.',
+  'Ulang kaji soalan yang anda jawab salah dalam <b>📖 Jurnal Kesilapan</b>. Soalan kekal di situ sehingga anda menjawabnya dengan betul.'
+ ]],
+ stuTip:['🏆 Points: 100 per correct answer + 500 per zone cleared. Progress is saved on this device, so keep using the same phone or laptop and browser.',
+  '🏆 Mata: 100 bagi setiap jawapan betul + 500 bagi setiap zon selesai. Kemajuan disimpan pada peranti ini, jadi teruskan menggunakan telefon atau komputer riba dan pelayar yang sama.'],
+ tchSteps:[[
+  'Open the <b>teacher link</b> you were given and enter the teacher passcode. Each device asks only once.',
+  'Type a class name and tap <b>Create class & get PIN</b>. Put the dashboard on the projector: it shows the game link and the big PIN.',
+  'Students open the game link, tap <b>Join with Game PIN</b>, and enter the PIN and a nickname. No accounts are needed.',
+  'Watch the live leaderboard, accuracy by topic (weakest first), progress by job class, and a card for each student.',
+  'Use <b>🔒 Lock class</b> to stop saving progress, <b>Remove</b> (tap twice) for an unsuitable nickname, and <b>🗑 Delete class</b> (tap twice) when the class is finished.'
+ ],[
+  'Buka <b>pautan guru</b> yang diberikan kepada anda dan masukkan kod laluan guru. Setiap peranti hanya meminta sekali.',
+  'Taip nama kelas dan ketik <b>Cipta kelas & dapatkan PIN</b>. Paparkan papan pemuka pada projektor: ia menunjukkan pautan permainan dan PIN besar.',
+  'Pelajar membuka pautan permainan, ketik <b>Sertai dengan PIN</b>, dan masukkan PIN serta nama samaran. Tiada akaun diperlukan.',
+  'Pantau papan pendahulu secara langsung, ketepatan mengikut topik (paling lemah dahulu), kemajuan mengikut kelas wira, dan kad setiap pelajar.',
+  'Gunakan <b>🔒 Kunci kelas</b> untuk berhenti menyimpan kemajuan, <b>Buang</b> (ketik dua kali) untuk nama samaran yang tidak sesuai, dan <b>🗑 Padam kelas</b> (ketik dua kali) apabila kelas selesai.'
+ ]],
+ tchTip:['💡 Manage your classes from the same device and browser you created them in. You can reuse one class PIN for the whole term.',
+  '💡 Urus kelas anda daripada peranti dan pelayar yang sama yang digunakan untuk menciptanya. Anda boleh menggunakan satu PIN kelas sepanjang penggal.'],
  justNow:['just now','baru sahaja'], mAgo:n=>[`${n} min ago`,`${n} minit lalu`], hAgo:n=>[`${n}h ago`,`${n} jam lalu`], dAgo:n=>[`${n}d ago`,`${n} hari lalu`]
 };
 const t = (k,...a) => { const v = T[k]; return L(typeof v==='function' ? v(...a) : v); };
@@ -836,6 +878,7 @@ function setLang(l){
 }
 
 // ======================= SCREENS =======================
+let guideTab = 'stu', guideOpen = true;
 function titleScreen(){
   app.innerHTML = `
     <div class="hero">🐉</div>
@@ -850,6 +893,15 @@ function titleScreen(){
       </div>
 
     </div>
+    <details class="panel guide" ${guideOpen?'open':''} ontoggle="guideOpen=this.open">
+      <summary>${t('guideTitle')}</summary>
+      <div class="gtabs">
+        <button class="btn ghost small ${guideTab==='stu'?'on':''}" onclick="guideTab='stu';titleScreen()">${t('gStu')}</button>
+        <button class="btn ghost small ${guideTab==='tch'?'on':''}" onclick="guideTab='tch';titleScreen()">${t('gTch')}</button>
+      </div>
+      <ol>${t(guideTab==='stu'?'stuSteps':'tchSteps').map(s=>`<li>${s}</li>`).join('')}</ol>
+      <p class="gtip">${t(guideTab==='stu'?'stuTip':'tchTip')}</p>
+    </details>
     <p class="muted center" style="font-size:13px">${t('savedNote')}</p>`;
 }
 
